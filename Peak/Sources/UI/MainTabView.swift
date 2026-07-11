@@ -47,8 +47,8 @@ struct MainTabView: View {
         }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            if let uiImage = UIImage(data: data)?.circularImage(size: 24) {
-                profileImage = Image(uiImage: uiImage).renderingMode(.original)
+            if let uiImage = UIImage(data: data)?.circularImage(size: 24)?.withRenderingMode(.alwaysOriginal) {
+                profileImage = Image(uiImage: uiImage)
             }
         } catch {
             print("Failed to load tab bar avatar: \(error)")
@@ -62,7 +62,7 @@ extension UIImage {
         let rect = CGRect(x: 0, y: 0, width: size, height: size)
         
         let format = UIGraphicsImageRendererFormat()
-        format.scale = self.scale
+        format.scale = UIScreen.main.scale
         let renderer = UIGraphicsImageRenderer(size: rect.size, format: format)
         
         return renderer.image { ctx in
