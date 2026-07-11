@@ -15,6 +15,7 @@ struct ChatDetailView: View {
     @State private var isUploadingMedia = false
     
     @State private var editingMessage: Message? = nil
+    @State private var replyingMessage: Message? = nil
     
     @State private var showUploadError = false
     @State private var uploadError = ""
@@ -49,6 +50,31 @@ struct ChatDetailView: View {
                         Button {
                             editingMessage = nil
                             messageText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(PeakColors.textTertiary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(PeakColors.surface)
+                }
+
+                // Replying banner
+                if let replying = replyingMessage {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Ответ")
+                                .font(PeakTypography.caption)
+                                .foregroundStyle(PeakColors.accent)
+                            Text(replying.displayText)
+                                .font(PeakTypography.body)
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Button {
+                            replyingMessage = nil
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(PeakColors.textTertiary)
@@ -97,6 +123,13 @@ struct ChatDetailView: View {
                                 removal: .opacity
                             ))
                             .contextMenu {
+                                Button {
+                                    replyingMessage = message
+                                    isInputFocused = true
+                                } label: {
+                                    Label("Ответить", systemImage: "arrowshape.turn.up.left")
+                                }
+                                
                                 if message.isFromMe(myId: appState.currentUser?.id) {
                                     if message.type == .text {
                                         Button {
@@ -233,7 +266,8 @@ struct ChatDetailView: View {
             appState.updateMessage(updatedMessage)
             editingMessage = nil
         } else {
-            appState.send(trimmed, in: chat.id)
+            appState.send(trimmed, in: chat.id, replyToId: replyingMessage?.id)
+            replyingMessage = nil
         }
     }
     
@@ -278,10 +312,11 @@ struct ChatDetailView: View {
                 timestamp: Date(),
                 isRead: false,
                 isEdited: false,
-                replyToId: nil
+                replyToId: replyingMessage?.id
             )
             
             appState.send(msg) // We need to update AppState to handle full message sending
+            replyingMessage = nil
         } catch {
             print("Failed to upload media: \(error)")
             uploadError = error.localizedDescription

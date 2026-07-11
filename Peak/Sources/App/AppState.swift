@@ -138,7 +138,7 @@ final class AppState {
         chats.first { $0.id == id }
     }
 
-    func send(_ text: String, in chatId: UUID) {
+    func send(_ text: String, in chatId: UUID, replyToId: UUID? = nil) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let senderId = currentUser?.id else { return }
         let msg = Message(
@@ -154,7 +154,7 @@ final class AppState {
             timestamp: Date(),
             isRead: false,
             isEdited: false,
-            replyToId: nil
+            replyToId: replyToId
         )
         send(msg)
     }

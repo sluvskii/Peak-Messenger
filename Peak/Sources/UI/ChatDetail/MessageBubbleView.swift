@@ -7,6 +7,13 @@ struct MessageBubbleView: View {
     let message: Message
 
     private var isFromMe: Bool { message.isFromMe(myId: appState.currentUser?.id) }
+    
+    private var repliedMessage: Message? {
+        if let replyToId = message.replyToId {
+            return appState.chat(for: message.chatId)?.messages.first(where: { $0.id == replyToId })
+        }
+        return nil
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
@@ -29,19 +36,39 @@ struct MessageBubbleView: View {
     private var bubbleBody: some View {
         switch message.type {
         case .text, .deleted:
-            Text(message.displayText)
-                .font(PeakTypography.body)
-                .foregroundStyle(isFromMe ? PeakColors.black : PeakColors.textPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(isFromMe ? PeakColors.bubbleOut : PeakColors.bubbleIn)
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(PeakColors.divider, lineWidth: isFromMe ? 0 : 0.5)
-                )
+            VStack(alignment: .leading, spacing: 4) {
+                if let replied = repliedMessage {
+                    HStack(spacing: 8) {
+                        Capsule()
+                            .fill(PeakColors.accent)
+                            .frame(width: 2)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ответ")
+                                .font(PeakTypography.tiny)
+                                .foregroundStyle(PeakColors.accent)
+                            Text(replied.displayText)
+                                .font(PeakTypography.caption)
+                                .foregroundStyle(isFromMe ? PeakColors.textSecondary : PeakColors.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.bottom, 2)
+                }
+                Text(message.displayText)
+                    .font(PeakTypography.body)
+                    .foregroundStyle(isFromMe ? PeakColors.black : PeakColors.textPrimary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isFromMe ? PeakColors.bubbleOut : PeakColors.bubbleIn)
+            .clipShape(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(PeakColors.divider, lineWidth: isFromMe ? 0 : 0.5)
+            )
 
         case .image:
             if let mediaUrlString = message.mediaUrl, let url = URL(string: mediaUrlString) {
