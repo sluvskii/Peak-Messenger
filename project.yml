@@ -2,9 +2,9 @@ name: Peak
 
 options:
   bundleIdPrefix: com.peak
-  xcodeVersion: 15.4
+  xcodeVersion: "26.0"
   deploymentTarget:
-    iOS: 17.0 # Setting 17.0 as a safe realistic high target, since "26.0" doesn't actually exist in current Xcode runners yet.
+    iOS: "26.0"
 
 packages:
   Firebase:
@@ -15,7 +15,7 @@ targets:
   Peak:
     type: application
     platform: iOS
-    deploymentTarget: 17.0
+    deploymentTarget: "26.0"
     sources:
       - path: Peak/Sources
     info:
