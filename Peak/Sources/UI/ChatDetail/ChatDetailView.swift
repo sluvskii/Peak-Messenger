@@ -5,6 +5,7 @@ import SwiftUI
 struct ChatDetailView: View {
     let chat: Chat
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
     @State private var messageText = ""
     @State private var scrollProxy: ScrollViewProxy? = nil
@@ -17,7 +18,7 @@ struct ChatDetailView: View {
     private var participant: User { chat.otherParticipant ?? .alex }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             PeakColors.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -27,12 +28,13 @@ struct ChatDetailView: View {
                 // Input bar
                 inputBar
             }
+
+            // Floating Header
+            floatingHeader
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { navBarContent }
-        .toolbarBackground(PeakColors.surface, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             appState.markAllRead(in: chat.id)
         }
@@ -43,6 +45,9 @@ struct ChatDetailView: View {
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                // Push content below floating header
+                Spacer().frame(height: 110)
+                
                 LazyVStack(spacing: 0) {
                     ForEach(messages) { message in
                         MessageBubbleView(message: message)
@@ -53,10 +58,11 @@ struct ChatDetailView: View {
                             ))
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.bottom, 16)
             }
-            .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
+            .ignoresSafeArea()
             .onAppear {
                 scrollProxy = proxy
                 scrollToBottom(proxy: proxy, animated: false)
@@ -67,12 +73,70 @@ struct ChatDetailView: View {
         }
     }
 
+    // MARK: — Floating Header
+
+    private var floatingHeader: some View {
+        HStack(spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PeakColors.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .clipShape(Circle())
+            }
+
+            HStack(spacing: 10) {
+                AvatarView(user: participant, size: 36, showOnline: true)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(participant.username)
+                        .font(PeakTypography.headline)
+                        .foregroundStyle(PeakColors.textPrimary)
+                    Text(participant.lastSeenText)
+                        .font(PeakTypography.tiny)
+                        .foregroundStyle(PeakColors.textSecondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            
+            Button {
+                // Audio/Video call action
+            } label: {
+                Image(systemName: "phone")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PeakColors.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .clipShape(Circle())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 60) // Safe area inset
+        .padding(.bottom, 20)
+        .background(
+            LinearGradient(
+                colors: [PeakColors.black, PeakColors.black.opacity(0.8), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .ignoresSafeArea()
+    }
+
     // MARK: — Input Bar
 
     private var inputBar: some View {
         VStack(spacing: 0) {
-            PeakDivider()
-
             HStack(alignment: .bottom, spacing: 10) {
                 // Attachment
                 Button {
@@ -119,35 +183,13 @@ struct ChatDetailView: View {
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(PeakColors.black)
-            .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
-        }
-    }
-
-    // MARK: — Nav bar
-
-    @ToolbarContentBuilder
-    private var navBarContent: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Button {
-                // open profile detail
-            } label: {
-                VStack(spacing: 2) {
-                    Text(participant.username)
-                        .font(PeakTypography.headline)
-                        .foregroundStyle(PeakColors.textPrimary)
-                    Text(participant.lastSeenText)
-                        .font(PeakTypography.tiny)
-                        .foregroundStyle(PeakColors.textSecondary)
-                }
-            }
-            .buttonStyle(.plain)
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            AvatarView(user: participant, size: 32, showOnline: true)
+            .padding(.bottom, 8) // SafeArea will be handled automatically by SwiftUI keyboard avoidance
         }
     }
 

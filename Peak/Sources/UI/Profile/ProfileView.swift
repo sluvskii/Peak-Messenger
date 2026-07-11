@@ -9,10 +9,13 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .top) {
                 PeakColors.black.ignoresSafeArea()
 
                 ScrollView {
+                    // Push content below header
+                    Spacer().frame(height: 100)
+                    
                     VStack(spacing: 0) {
                         // Avatar + Name Header
                         headerSection
@@ -23,20 +26,60 @@ struct ProfileView: View {
                         }
                         .padding(.top, 24)
                     }
+                    .padding(.bottom, 100) // Padding for tab bar
                 }
-                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .ignoresSafeArea()
+                
+                // Floating Header
+                floatingHeader
             }
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+    
+    // MARK: — Floating Header
+    
+    private var floatingHeader: some View {
+        HStack {
+            Text("Profile")
+                .font(PeakTypography.display)
+                .foregroundStyle(PeakColors.textPrimary)
+            
+            Spacer()
+            
+            Button {
+                // Edit profile action
+            } label: {
+                Text("Edit")
+                    .font(PeakTypography.button)
+                    .foregroundStyle(PeakColors.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 50)
+        .padding(.bottom, 20)
+        .background(
+            LinearGradient(
+                colors: [PeakColors.black, PeakColors.black.opacity(0.8), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .ignoresSafeArea()
     }
 
     // MARK: — Header
 
     private var headerSection: some View {
         VStack(spacing: 14) {
-            AvatarView(user: user, size: 86, showOnline: false)
-                .padding(.top, 20)
+            AvatarView(user: user, size: 100, showOnline: false)
+                .padding(.top, 10)
 
             VStack(spacing: 4) {
                 Text(user.username)
@@ -48,6 +91,7 @@ struct ProfileView: View {
                         .font(PeakTypography.callout)
                         .foregroundStyle(PeakColors.textSecondary)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
                 }
             }
         }
@@ -68,7 +112,7 @@ struct ProfileView: View {
             InfoRow(icon: "bubble.left.fill", label: "Bio", value: user.bio.isEmpty ? "—" : user.bio)
         }
         .background(PeakColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .padding(.horizontal, 16)
     }
 
@@ -85,7 +129,7 @@ struct ProfileView: View {
             SettingsRow(icon: "questionmark.circle.fill", title: "Help")
         }
         .background(PeakColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.top, 20)
         .padding(.bottom, 40)

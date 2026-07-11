@@ -15,23 +15,80 @@ struct ContactsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .top) {
                 PeakColors.black.ignoresSafeArea()
 
                 ScrollView {
+                    // Padding to push content below the floating header
+                    Spacer().frame(height: 120)
+                    
                     LazyVStack(spacing: 0) {
                         ForEach(filtered) { user in
                             contactRow(user)
                             PeakDivider().padding(.leading, 70)
                         }
                     }
+                    .padding(.bottom, 100) // Padding for tab bar
                 }
-                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .ignoresSafeArea()
+                
+                // Floating Header
+                floatingHeader
             }
-            .navigationTitle("Contacts")
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search contacts")
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+    
+    // MARK: — Floating Header
+    
+    private var floatingHeader: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Contacts")
+                    .font(PeakTypography.display)
+                    .foregroundStyle(PeakColors.textPrimary)
+                Spacer()
+                
+                Button {
+                    // Add contact action
+                } label: {
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(PeakColors.textPrimary)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .environment(\.colorScheme, .dark)
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            // Floating Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(PeakColors.textSecondary)
+                TextField("Search contacts", text: $searchText)
+                    .font(PeakTypography.body)
+                    .foregroundStyle(PeakColors.textPrimary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(.horizontal, 16)
+        }
+        .padding(.top, 50)
+        .padding(.bottom, 20)
+        .background(
+            LinearGradient(
+                colors: [PeakColors.black, PeakColors.black.opacity(0.8), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .ignoresSafeArea()
     }
 
     @ViewBuilder
@@ -56,8 +113,11 @@ struct ContactsView: View {
                 // navigate to chat
             } label: {
                 Image(systemName: "bubble.right")
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(PeakColors.textTertiary)
+                    .padding(10)
+                    .background(PeakColors.surface)
+                    .clipShape(Circle())
             }
         }
         .padding(.horizontal, 16)
