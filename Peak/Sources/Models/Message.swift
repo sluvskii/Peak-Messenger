@@ -43,12 +43,12 @@ struct Message: Identifiable, Hashable, Codable {
     var displayText: String {
         switch type {
         case .text:    return text ?? ""
-        case .image:   return "🖼 Photo"
-        case .video:   return "🎥 Video"
-        case .circle:  return "⭕ Video message"
-        case .file:    return "📎 \(fileName ?? "File")"
-        case .voice:   return "🎤 Voice message"
-        case .deleted: return "Message deleted"
+        case .image:   return "🖼 Фото"
+        case .video:   return "🎥 Видео"
+        case .circle:  return "⭕ Видеосообщение"
+        case .file:    return "📎 \(fileName ?? "Файл")"
+        case .voice:   return "🎤 Голосовое"
+        case .deleted: return "Сообщение удалено"
         }
     }
 }

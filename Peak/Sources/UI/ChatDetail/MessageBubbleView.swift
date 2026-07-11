@@ -72,7 +72,7 @@ struct MessageBubbleView: View {
             }
 
             if message.isEdited {
-                Text("edited")
+                Text("изм.")
                     .font(PeakTypography.tiny)
                     .foregroundStyle(PeakColors.textTertiary)
             }

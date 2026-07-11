@@ -27,17 +27,18 @@ struct Chat: Identifiable, Hashable, Codable {
     var displayTime: String {
         guard let last = lastMessage else { return "" }
         let diff = Date().timeIntervalSince(last.timestamp)
-        if diff < 60 { return "now" }
+        if diff < 60 { return "сейчас" }
         if diff < 3600 {
             let mins = Int(diff / 60)
-            return "\(mins)m"
+            return "\(mins)м"
         }
         if diff < 86400 {
             let hrs = Int(diff / 3600)
-            return "\(hrs)h"
+            return "\(hrs)ч"
         }
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.dateFormat = "d MMM"
         return formatter.string(from: last.timestamp)
     }
 }

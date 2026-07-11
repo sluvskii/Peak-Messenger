@@ -28,9 +28,9 @@ struct ContactsView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Contacts")
+            .navigationTitle("Контакты")
             .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search contacts")
+            .searchable(text: $searchText, prompt: "Поиск")
             .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
@@ -45,7 +45,7 @@ struct ContactsView: View {
                     .font(PeakTypography.headline)
                     .foregroundStyle(PeakColors.textPrimary)
 
-                Text(user.isOnline ? "online" : user.lastSeenText)
+                Text(user.isOnline ? "в сети" : user.lastSeenText)
                     .font(PeakTypography.callout)
                     .foregroundStyle(PeakColors.textSecondary)
             }

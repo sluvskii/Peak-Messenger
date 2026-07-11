@@ -31,7 +31,7 @@ struct ChatListView: View {
             }
             .navigationTitle("Peak")
             .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search conversations")
+            .searchable(text: $searchText, prompt: "Поиск")
             .toolbar { toolbarContent }
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -64,7 +64,7 @@ struct ChatListView: View {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 48, weight: .thin))
                 .foregroundStyle(PeakColors.textTertiary)
-            Text("No conversations yet")
+            Text("Пока нет чатов")
                 .font(PeakTypography.headline)
                 .foregroundStyle(PeakColors.textSecondary)
         }

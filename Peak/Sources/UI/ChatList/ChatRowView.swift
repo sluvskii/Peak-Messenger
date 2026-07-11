@@ -21,7 +21,7 @@ struct ChatRowView: View {
                                 .font(.system(size: 10))
                                 .foregroundStyle(PeakColors.textTertiary)
                         }
-                        Text(chat.otherParticipant?.username ?? "Unknown")
+                        Text(chat.otherParticipant?.username ?? "Неизвестно")
                             .font(PeakTypography.headline)
                             .foregroundStyle(PeakColors.textPrimary)
                             .lineLimit(1)

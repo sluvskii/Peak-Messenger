@@ -12,20 +12,20 @@ struct MainTabView: View {
             Tab(value: AppState.Tab.chats) {
                 ChatListView()
             } label: {
-                Label("Chats", systemImage: "bubble.left.and.bubble.right")
+                Label("Чаты", systemImage: "bubble.left.and.bubble.right")
             }
 
             Tab(value: AppState.Tab.contacts) {
                 ContactsView()
             } label: {
-                Label("Contacts", systemImage: "person.2")
+                Label("Контакты", systemImage: "person.2")
             }
 
             Tab(value: AppState.Tab.profile) {
                 ProfileView()
             } label: {
                 Label {
-                    Text("Profile")
+                    Text("Профиль")
                 } icon: {
                     AvatarView(user: appState.currentUser, size: 24, showOnline: false)
                 }

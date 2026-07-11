@@ -26,7 +26,7 @@ struct ProfileView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Profile")
+            .navigationTitle("Профиль")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -59,14 +59,14 @@ struct ProfileView: View {
 
     private var infoSection: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "Info")
+            SectionHeader(title: "Информация")
 
             if let phone = user.phone {
-                InfoRow(icon: "phone.fill", label: "Phone", value: phone)
+                InfoRow(icon: "phone.fill", label: "Телефон", value: phone)
                 PeakDivider().padding(.leading, 52)
             }
 
-            InfoRow(icon: "bubble.left.fill", label: "Bio", value: user.bio.isEmpty ? "—" : user.bio)
+            InfoRow(icon: "bubble.left.fill", label: "О себе", value: user.bio.isEmpty ? "—" : user.bio)
         }
         .background(PeakColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -77,13 +77,13 @@ struct ProfileView: View {
 
     private var settingsSection: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "Settings")
+            SectionHeader(title: "Настройки")
 
-            SettingsRow(icon: "bell.fill",        title: "Notifications")
+            SettingsRow(icon: "bell.fill",        title: "Уведомления")
             PeakDivider().padding(.leading, 52)
-            SettingsRow(icon: "lock.fill",         title: "Privacy & Security")
+            SettingsRow(icon: "lock.fill",         title: "Конфиденциальность")
             PeakDivider().padding(.leading, 52)
-            SettingsRow(icon: "questionmark.circle.fill", title: "Help")
+            SettingsRow(icon: "questionmark.circle.fill", title: "Помощь")
         }
         .background(PeakColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

@@ -85,7 +85,7 @@ struct ChatDetailView: View {
                 }
 
                 // Text field
-                TextField("Message", text: $messageText, axis: .vertical)
+                TextField("Сообщение", text: $messageText, axis: .vertical)
                     .font(PeakTypography.body)
                     .foregroundStyle(PeakColors.textPrimary)
                     .lineLimit(1...6)

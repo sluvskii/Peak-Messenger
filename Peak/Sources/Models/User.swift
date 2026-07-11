@@ -18,22 +18,22 @@ struct User: Identifiable, Hashable, Codable {
     }
 
     var lastSeenText: String {
-        guard !isOnline else { return "online" }
-        guard let lastSeen else { return "last seen recently" }
+        guard !isOnline else { return "в сети" }
+        guard let lastSeen else { return "был(а) недавно" }
         let diff = Date().timeIntervalSince(lastSeen)
-        if diff < 60 { return "last seen just now" }
-        if diff < 3600 { return "last seen \(Int(diff / 60))m ago" }
-        if diff < 86400 { return "last seen \(Int(diff / 3600))h ago" }
+        if diff < 60 { return "был(а) только что" }
+        if diff < 3600 { return "был(а) \(Int(diff / 60)) м назад" }
+        if diff < 86400 { return "был(а) \(Int(diff / 3600)) ч назад" }
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
-        return "last seen \(formatter.string(from: lastSeen))"
+        return "был(а) \(formatter.string(from: lastSeen))"
     }
 
     // MARK: — Mock Data
     static let me = User(
         id: "me",
-        username: "You",
+        username: "Вы",
         bio: "Peak early adopter 🖤",
         avatarUrl: nil,
         isOnline: true,
