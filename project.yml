@@ -5,11 +5,18 @@ options:
   deploymentTarget:
     iOS: "26.0"
 
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: 2.0.0
+
 targets:
   Peak:
     type: application
     platform: iOS
     deploymentTarget: "26.0"
+    dependencies:
+      - package: Supabase
     sources:
       - path: Peak/Sources
     info:
