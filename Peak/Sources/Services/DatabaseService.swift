@@ -21,6 +21,71 @@ final class DatabaseService {
 
     // MARK: — Chats
 
+    func fetchMyChats() async throws -> [Chat] {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return [] }
+        
+        struct ParticipantResult: Decodable { let chat_id: UUID }
+        let myChatsResponse: [ParticipantResult] = try await client
+            .from("chat_participants")
+            .select("chat_id")
+            .eq("user_id", value: myId)
+            .execute()
+            .value
+            
+        let myChatIds = myChatsResponse.map { $0.chat_id }
+        guard !myChatIds.isEmpty else { return [] }
+        
+        struct ParticipantUser: Decodable {
+            let chat_id: UUID
+            let user_id: UUID
+            let is_pinned: Bool
+            let is_muted: Bool
+        }
+        
+        let participants: [ParticipantUser] = try await client
+            .from("chat_participants")
+            .select("chat_id, user_id, is_pinned, is_muted")
+            .in("chat_id", values: myChatIds)
+            .execute()
+            .value
+            
+        let userIds = Array(Set(participants.map { $0.user_id }))
+        let users: [User] = try await client
+            .from("users")
+            .select()
+            .in("id", values: userIds)
+            .execute()
+            .value
+            
+        let usersDict = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
+        
+        var chats: [Chat] = []
+        for chatId in myChatIds {
+            let chatParticipants = participants.filter { $0.chat_id == chatId }
+            let chatUsers = chatParticipants.compactMap { usersDict[$0.user_id] }
+            
+            let isPinned = chatParticipants.first(where: { $0.user_id == myId })?.is_pinned ?? false
+            let isMuted = chatParticipants.first(where: { $0.user_id == myId })?.is_muted ?? false
+            
+            chats.append(Chat(id: chatId, participants: chatUsers, messages: [], isPinned: isPinned, isMuted: isMuted, draftText: nil))
+        }
+        
+        let allMessages: [Message] = try await client
+            .from("messages")
+            .select()
+            .in("chat_id", values: myChatIds)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+            
+        let messagesByChat = Dictionary(grouping: allMessages, by: { $0.chatId })
+        for i in 0..<chats.count {
+            chats[i].messages = messagesByChat[chats[i].id] ?? []
+        }
+        
+        return chats
+    }
+
     func getOrCreateChat(with otherUserId: UUID) async throws -> Chat {
         guard let myId = try await AuthenticationService.shared.currentUserId else {
             throw URLError(.userAuthenticationRequired)

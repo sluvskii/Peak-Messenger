@@ -14,18 +14,63 @@ final class AppState {
     var isUserAuthenticated = false
 
     // MARK: Data
-    var chats: [Chat] = Chat.mockChats
+    var chats: [Chat] = []
     var currentUser: User?
+    var contacts: [User] = []
 
     func checkSession() async {
-        for await (event, session) in AuthenticationService.shared.authStateChanges {
+        for await (_, session) in AuthenticationService.shared.authStateChanges {
             isUserAuthenticated = session != nil
             if session != nil {
-                // We will fetch the user from Supabase here later
-                currentUser = .me
+                if let userId = session?.user.id {
+                    do {
+                        let me: User = try await SupabaseManager.shared.client.from("users").select().eq("id", value: userId).single().execute().value
+                        currentUser = me
+                    } catch {
+                        print("Failed to fetch me: \(error)")
+                        currentUser = User(id: userId, username: "Я", bio: "", avatarUrl: nil, isOnline: true, lastSeen: Date(), phone: nil)
+                    }
+                }
+                await loadInitialData()
             } else {
                 currentUser = nil
+                chats = []
+                contacts = []
             }
+        }
+    }
+
+    func loadInitialData() async {
+        do {
+            let allUsers = try await DatabaseService.shared.fetchAllUsers()
+            // Exclude current user from contacts
+            if let meId = currentUser?.id {
+                self.contacts = allUsers.filter { $0.id != meId }
+            } else {
+                self.contacts = allUsers
+            }
+            
+            self.chats = try await DatabaseService.shared.fetchMyChats()
+            
+            // Listen for messages in all chats
+            for chat in self.chats {
+                Task {
+                    do {
+                        for try await message in try await DatabaseService.shared.listenForMessages(in: chat.id) {
+                            if let idx = self.chats.firstIndex(where: { $0.id == chat.id }) {
+                                // append message if it doesn't already exist
+                                if !self.chats[idx].messages.contains(where: { $0.id == message.id }) {
+                                    self.chats[idx].messages.append(message)
+                                }
+                            }
+                        }
+                    } catch {
+                        print("Listen messages error: \(error)")
+                    }
+                }
+            }
+        } catch {
+            print("Failed to load initial data: \(error)")
         }
     }
 
@@ -61,7 +106,16 @@ final class AppState {
             isEdited: false,
             replyToId: nil
         )
+        // Optimistic update
         chats[idx].messages.append(msg)
+        
+        Task {
+            do {
+                try await DatabaseService.shared.sendMessage(msg)
+            } catch {
+                print("Failed to send message: \(error)")
+            }
+        }
     }
 
     func markAllRead(in chatId: UUID) {
@@ -85,7 +139,7 @@ final class AppState {
         chats.removeAll { $0.id == chatId }
     }
 
-    var contacts: [User] { User.allContacts }
+
 
     var totalUnread: Int { chats.reduce(0) { $0 + $1.unreadCount } }
 }

@@ -84,6 +84,31 @@ struct ProfileView: View {
             SettingsRow(icon: "lock.fill",         title: "Конфиденциальность")
             PeakDivider().padding(.leading, 52)
             SettingsRow(icon: "questionmark.circle.fill", title: "Помощь")
+            PeakDivider().padding(.leading, 52)
+            
+            Button {
+                Task {
+                    do {
+                        try await AuthenticationService.shared.signOut()
+                    } catch {
+                        print("Error signing out: \(error)")
+                    }
+                }
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .frame(width: 22)
+                        .foregroundStyle(.red)
+                    Text("Выйти")
+                        .font(PeakTypography.body)
+                        .foregroundStyle(.red)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressButtonStyle())
         }
         .background(PeakColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
