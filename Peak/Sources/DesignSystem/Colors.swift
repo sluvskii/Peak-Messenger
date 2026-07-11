@@ -1,32 +1,50 @@
 import SwiftUI
 
-/// The core color palette for Peak Messenger.
-/// A strict monochrome (black & white) design system for a premium feel.
-struct PeakColors {
-    /// Pure black or white depending on color scheme (mostly we will force dark mode or use pure black as background in dark mode).
-    static let background = Color("Background", bundle: nil) // We'll rely on system colors or custom
-    
-    // For a pure B&W app, we might just define them directly:
-    
-    /// Primary text and icons (White in dark mode, Black in light mode, but the app prefers dark mode)
-    static let primary = Color.white
-    
-    /// True black background
-    static let pureBlack = Color.black
-    
-    /// True white
-    static let pureWhite = Color.white
-    
-    /// Secondary text and subtle borders
-    static let secondary = Color(white: 0.6)
-    
-    /// Tertiary elements like placeholder text or faint dividers
-    static let tertiary = Color(white: 0.3)
-    
-    /// A subtle gray for chat bubbles from others
-    static let bubbleGray = Color(white: 0.15)
-}
+// MARK: — Peak Color System
+// Strict B&W palette — monochrome, premium, timeless.
 
-extension Color {
-    // Convenience extensions if needed later
+struct PeakColors {
+
+    // MARK: Backgrounds
+    /// True black — primary background
+    static let black = Color.black
+    /// Off-black — elevated surfaces (sheets, cards)
+    static let surface = Color(white: 0.08)
+    /// Subtle separator / divider
+    static let divider = Color(white: 0.12)
+
+    // MARK: Bubbles
+    /// Incoming message bubble background
+    static let bubbleIn  = Color(white: 0.13)
+    /// Outgoing message bubble background
+    static let bubbleOut = Color.white
+
+    // MARK: Text
+    /// Primary text — pure white
+    static let textPrimary   = Color.white
+    /// Secondary text — muted gray
+    static let textSecondary = Color(white: 0.55)
+    /// Tertiary text — very muted
+    static let textTertiary  = Color(white: 0.35)
+
+    // MARK: Interactive
+    /// Accent — white (taps, selections)
+    static let accent = Color.white
+    /// Online indicator
+    static let online = Color.white
+    /// Destructive action
+    static let destructive = Color(white: 0.8)
+
+    // MARK: Avatar tints (for initials avatars)
+    static let avatarTints: [Color] = [
+        Color(white: 0.18),
+        Color(white: 0.14),
+        Color(white: 0.20),
+        Color(white: 0.16),
+    ]
+
+    static func avatarTint(for id: String) -> Color {
+        let idx = abs(id.hashValue) % avatarTints.count
+        return avatarTints[idx]
+    }
 }

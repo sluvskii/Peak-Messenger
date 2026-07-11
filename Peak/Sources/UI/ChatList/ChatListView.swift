@@ -1,41 +1,94 @@
 import SwiftUI
 
+// MARK: — Chat List Screen
+
 struct ChatListView: View {
-    @State private var chats: [Chat] = Chat.mockChats
-    
+    @Environment(AppState.self) private var appState
+    @State private var searchText = ""
+    @State private var searchActive = false
+
+    private var filteredChats: [Chat] {
+        let sorted = appState.chats.sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned }
+            return ($0.lastMessage?.timestamp ?? .distantPast) > ($1.lastMessage?.timestamp ?? .distantPast)
+        }
+        if searchText.isEmpty { return sorted }
+        return sorted.filter {
+            ($0.otherParticipant?.username.localizedCaseInsensitiveContains(searchText) ?? false)
+            || ($0.lastMessage?.displayText.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                PeakColors.pureBlack.ignoresSafeArea()
-                
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(chats) { chat in
-                            NavigationLink(value: chat) {
-                                ChatRowView(chat: chat)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                }
-                .navigationDestination(for: Chat.self) { chat in
-                    ChatDetailView(chat: chat)
+                PeakColors.black.ignoresSafeArea()
+
+                if appState.chats.isEmpty {
+                    emptyState
+                } else {
+                    chatList
                 }
             }
-            .navigationTitle("PEAK")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {}) {
-                        Image(systemName: "square.and.pencil")
-                            .foregroundColor(PeakColors.primary)
+            .navigationTitle("Peak")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(
+                text: $searchText,
+                isPresented: $searchActive,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search conversations"
+            )
+            .toolbar { toolbarContent }
+        }
+    }
+
+    // MARK: — Subviews
+
+    private var chatList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredChats) { chat in
+                    NavigationLink(value: chat) {
+                        ChatRowView(chat: chat)
                     }
+                    .buttonStyle(PressButtonStyle())
+
+                    PeakDivider()
+                        .padding(.leading, 86)
                 }
+            }
+            .navigationDestination(for: Chat.self) { chat in
+                ChatDetailView(chat: chat)
             }
         }
-        .preferredColorScheme(.dark)
+        .scrollContentBackground(.hidden)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 48, weight: .thin))
+                .foregroundStyle(PeakColors.textTertiary)
+            Text("No conversations yet")
+                .font(PeakTypography.headline)
+                .foregroundStyle(PeakColors.textSecondary)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                // New chat action
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .foregroundStyle(PeakColors.textPrimary)
+            }
+        }
     }
 }
 
 #Preview {
     ChatListView()
+        .environment(AppState())
 }

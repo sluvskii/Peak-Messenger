@@ -1,56 +1,88 @@
 import SwiftUI
 
+// MARK: — Chat List Row
+
 struct ChatRowView: View {
     let chat: Chat
-    
+
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
+
             // Avatar
-            Circle()
-                .fill(PeakColors.bubbleGray)
-                .frame(width: 56, height: 56)
-                .overlay(
-                    Text(chat.otherParticipant?.username.prefix(1).uppercased() ?? "")
-                        .font(PeakTypography.title.weight(.semibold))
-                        .foregroundColor(PeakColors.primary)
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(chat.otherParticipant?.username ?? "Unknown")
-                        .font(.system(size: 17, weight: .semibold, design: .default))
-                        .foregroundColor(PeakColors.primary)
-                    
-                    Spacer()
-                    
-                    if let lastMessage = chat.lastMessage {
-                        Text(formatDate(lastMessage.timestamp))
-                            .font(PeakTypography.caption)
-                            .foregroundColor(PeakColors.secondary)
+            AvatarView(user: chat.otherParticipant ?? .alex, size: 56, showOnline: true)
+
+            // Content
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline) {
+                    // Name
+                    HStack(spacing: 5) {
+                        if chat.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(PeakColors.textTertiary)
+                        }
+                        Text(chat.otherParticipant?.username ?? "Unknown")
+                            .font(PeakTypography.headline)
+                            .foregroundStyle(PeakColors.textPrimary)
+                            .lineLimit(1)
                     }
+
+                    Spacer()
+
+                    // Time
+                    Text(chat.displayTime)
+                        .font(PeakTypography.caption)
+                        .foregroundStyle(
+                            chat.unreadCount > 0
+                                ? PeakColors.textPrimary
+                                : PeakColors.textTertiary
+                        )
                 }
-                
-                if let lastMessage = chat.lastMessage {
-                    Text(lastMessage.text)
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(PeakColors.secondary)
-                        .lineLimit(2)
+
+                HStack(alignment: .bottom) {
+                    // Last message preview
+                    HStack(spacing: 4) {
+                        // Read receipt for my messages
+                        if let last = chat.lastMessage, last.isFromMe {
+                            Image(systemName: last.isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(PeakColors.textTertiary)
+                        }
+
+                        Text(chat.lastMessage?.displayText ?? "")
+                            .font(PeakTypography.callout)
+                            .foregroundStyle(PeakColors.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Unread badge or mute icon
+                    if chat.isMuted && chat.unreadCount == 0 {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(PeakColors.textTertiary)
+                    } else {
+                        UnreadBadge(count: chat.unreadCount)
+                    }
                 }
             }
         }
-        .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(PeakColors.pureBlack)
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
     }
 }
 
 #Preview {
-    ChatRowView(chat: Chat.mockChats[0])
-        .preferredColorScheme(.dark)
+    ZStack {
+        PeakColors.black.ignoresSafeArea()
+        VStack(spacing: 0) {
+            ForEach(Chat.mockChats) { chat in
+                ChatRowView(chat: chat)
+                PeakDivider().padding(.leading, 86)
+            }
+        }
+    }
+    .preferredColorScheme(.dark)
 }
