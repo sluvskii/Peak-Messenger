@@ -74,7 +74,7 @@ struct ChatListView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             Button {
-                // New chat action
+                appState.selectedTab = .contacts
             } label: {
                 Image(systemName: "square.and.pencil")
                     .foregroundStyle(PeakColors.textPrimary)
