@@ -17,7 +17,7 @@ struct ChatDetailView: View {
         isLoaded ? dbMessages : (appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages)
     }
 
-    private var participant: User { chat.otherParticipant ?? .alex }
+    private var participant: User { chat.otherParticipant(myId: appState.currentUser?.id) ?? .alex }
 
     var body: some View {
         ZStack {

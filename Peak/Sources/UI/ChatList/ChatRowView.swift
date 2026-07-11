@@ -5,11 +5,13 @@ import SwiftUI
 struct ChatRowView: View {
     let chat: Chat
 
+    @Environment(AppState.self) private var appState
+
     var body: some View {
         HStack(spacing: 14) {
 
             // Avatar
-            AvatarView(user: chat.otherParticipant ?? .alex, size: 56, showOnline: true)
+            AvatarView(user: chat.otherParticipant(myId: appState.currentUser?.id) ?? .alex, size: 56, showOnline: true)
 
             // Content
             VStack(alignment: .leading, spacing: 5) {
@@ -21,7 +23,7 @@ struct ChatRowView: View {
                                 .font(.system(size: 10))
                                 .foregroundStyle(PeakColors.textTertiary)
                         }
-                        Text(chat.otherParticipant?.username ?? "Неизвестно")
+                        Text(chat.otherParticipant(myId: appState.currentUser?.id)?.username ?? "Неизвестно")
                             .font(PeakTypography.headline)
                             .foregroundStyle(PeakColors.textPrimary)
                             .lineLimit(1)
@@ -80,6 +82,7 @@ struct ChatRowView: View {
         VStack(spacing: 0) {
             ForEach(Chat.mockChats) { chat in
                 ChatRowView(chat: chat)
+                    .environment(AppState())
                 PeakDivider().padding(.leading, 86)
             }
         }

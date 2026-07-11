@@ -13,7 +13,7 @@ struct ChatListView: View {
         }
         if searchText.isEmpty { return sorted }
         return sorted.filter {
-            ($0.otherParticipant?.username.localizedCaseInsensitiveContains(searchText) ?? false)
+            ($0.otherParticipant(myId: appState.currentUser?.id)?.username.localizedCaseInsensitiveContains(searchText) ?? false)
             || ($0.lastMessage?.displayText.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }

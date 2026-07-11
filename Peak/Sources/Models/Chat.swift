@@ -10,8 +10,11 @@ struct Chat: Identifiable, Hashable, Codable {
     var isMuted: Bool
     var draftText: String?
 
-    var otherParticipant: User? {
-        participants.first { $0.id != User.me.id }
+    func otherParticipant(myId: UUID?) -> User? {
+        guard let myId = myId else {
+            return participants.first { $0.id != User.me.id }
+        }
+        return participants.first { $0.id != myId } ?? participants.first
     }
 
     var sortedMessages: [Message] {
