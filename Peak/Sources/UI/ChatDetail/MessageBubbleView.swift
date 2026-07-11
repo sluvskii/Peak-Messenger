@@ -3,9 +3,10 @@ import SwiftUI
 // MARK: — Message Bubble
 
 struct MessageBubbleView: View {
+    @Environment(AppState.self) private var appState
     let message: Message
 
-    private var isFromMe: Bool { message.isFromMe }
+    private var isFromMe: Bool { message.isFromMe(myId: appState.currentUser?.id) }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {

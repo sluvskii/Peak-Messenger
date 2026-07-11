@@ -147,5 +147,5 @@ final class AppState {
 
 
 
-    var totalUnread: Int { chats.reduce(0) { $0 + $1.unreadCount } }
+    var totalUnread: Int { chats.reduce(0) { $0 + $1.unreadCount(myId: currentUser?.id) } }
 }

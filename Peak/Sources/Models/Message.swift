@@ -33,7 +33,7 @@ struct Message: Identifiable, Hashable, Codable {
     var fileSize: Int?          // bytes
     var duration: Double?       // seconds (for voice/video/circle)
     // var reactions: [Reaction] // We will ignore reactions in DB for now to keep it simple, or handle later
-    let timestamp: Date
+    @RobustDate var timestamp: Date
     var isRead: Bool
     var isEdited: Bool
     var replyToId: UUID?      // message id being replied to
@@ -51,9 +51,10 @@ struct Message: Identifiable, Hashable, Codable {
         case isEdited = "is_edited"
         case replyToId = "reply_to_id"
     }
-
-    var isFromMe: Bool { senderId == User.me.id }
-
+    func isFromMe(myId: UUID?) -> Bool {
+        guard let myId = myId else { return senderId == User.me.id }
+        return senderId == myId
+    }
     var displayText: String {
         switch type {
         case .text:    return text ?? ""

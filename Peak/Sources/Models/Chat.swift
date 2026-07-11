@@ -23,8 +23,8 @@ struct Chat: Identifiable, Hashable, Codable {
 
     var lastMessage: Message? { sortedMessages.last }
 
-    var unreadCount: Int {
-        messages.filter { !$0.isRead && !$0.isFromMe }.count
+    func unreadCount(myId: UUID?) -> Int {
+        messages.filter { !$0.isRead && !$0.isFromMe(myId: myId) }.count
     }
 
     var displayTime: String {

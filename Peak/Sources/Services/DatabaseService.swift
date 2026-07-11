@@ -216,17 +216,6 @@ final class DatabaseService {
                         let data = try JSONEncoder().encode(action.record)
                         
                         let decoder = JSONDecoder()
-                        let formatter = ISO8601DateFormatter()
-                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                        decoder.dateDecodingStrategy = .custom({ decoder in
-                            let container = try decoder.singleValueContainer()
-                            let string = try container.decode(String.self)
-                            if let date = formatter.date(from: string) { return date }
-                            formatter.formatOptions = [.withInternetDateTime]
-                            if let date = formatter.date(from: string) { return date }
-                            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(string)")
-                        })
-                        
                         let msg = try decoder.decode(Message.self, from: data)
                         continuation.yield(msg)
                     } catch {

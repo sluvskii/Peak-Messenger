@@ -190,6 +190,11 @@ struct ChatDetailView: View {
             }
         }
         
+        // Update global AppState so ChatList updates
+        if let idx = appState.chats.firstIndex(where: { $0.id == chat.id }) {
+            appState.chats[idx].messages.append(msg)
+        }
+        
         Task {
             do {
                 try await DatabaseService.shared.sendMessage(msg)

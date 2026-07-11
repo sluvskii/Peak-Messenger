@@ -35,7 +35,7 @@ struct ChatRowView: View {
                     Text(chat.displayTime)
                         .font(PeakTypography.caption)
                         .foregroundStyle(
-                            chat.unreadCount > 0
+                            chat.unreadCount(myId: appState.currentUser?.id) > 0
                                 ? PeakColors.textPrimary
                                 : PeakColors.textTertiary
                         )
@@ -60,12 +60,12 @@ struct ChatRowView: View {
                     Spacer()
 
                     // Unread badge or mute icon
-                    if chat.isMuted && chat.unreadCount == 0 {
+                    if chat.isMuted && chat.unreadCount(myId: appState.currentUser?.id) == 0 {
                         Image(systemName: "bell.slash.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(PeakColors.textTertiary)
                     } else {
-                        UnreadBadge(count: chat.unreadCount)
+                        UnreadBadge(count: chat.unreadCount(myId: appState.currentUser?.id))
                     }
                 }
             }
