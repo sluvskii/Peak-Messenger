@@ -6,7 +6,7 @@ struct PeakApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            ContentView()
                 .environment(appState)
                 .preferredColorScheme(.dark)
         }
