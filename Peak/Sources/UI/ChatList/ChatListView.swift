@@ -5,7 +5,6 @@ import SwiftUI
 struct ChatListView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var selectedChat: Chat?
 
     private var filteredChats: [Chat] {
         let sorted = appState.chats.sorted {
@@ -44,9 +43,7 @@ struct ChatListView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(filteredChats) { chat in
-                    Button {
-                        selectedChat = chat
-                    } label: {
+                    NavigationLink(value: chat) {
                         ChatRowView(chat: chat)
                     }
                     .buttonStyle(PressButtonStyle())
@@ -55,10 +52,8 @@ struct ChatListView: View {
                         .padding(.leading, 86)
                 }
             }
-            .fullScreenCover(item: $selectedChat) { chat in
-                NavigationStack {
-                    ChatDetailView(chat: chat)
-                }
+            .navigationDestination(for: Chat.self) { chat in
+                ChatDetailView(chat: chat)
             }
         }
         .scrollContentBackground(.hidden)
