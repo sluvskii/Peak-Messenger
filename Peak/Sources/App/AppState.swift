@@ -10,9 +10,24 @@ final class AppState {
     // MARK: Navigation
     var selectedTab: Tab = .chats
 
+    // MARK: Session
+    var isUserAuthenticated = false
+
     // MARK: Data
     var chats: [Chat] = Chat.mockChats
-    var currentUser: User = .me
+    var currentUser: User?
+
+    func checkSession() async {
+        for await (event, session) in AuthenticationService.shared.authStateChanges {
+            isUserAuthenticated = session != nil
+            if session != nil {
+                // We will fetch the user from Supabase here later
+                currentUser = .me
+            } else {
+                currentUser = nil
+            }
+        }
+    }
 
     // MARK: Tab definition
     enum Tab: Hashable {
@@ -23,17 +38,18 @@ final class AppState {
 
     // MARK: — Chat helpers
 
-    func chat(for id: String) -> Chat? {
+    func chat(for id: UUID) -> Chat? {
         chats.first { $0.id == id }
     }
 
-    func send(_ text: String, in chatId: String) {
+    func send(_ text: String, in chatId: UUID) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+              let idx = chats.firstIndex(where: { $0.id == chatId }),
+              let senderId = currentUser?.id else { return }
         let msg = Message(
-            id: UUID().uuidString,
+            id: UUID(),
             chatId: chatId,
-            senderId: User.me.id,
+            senderId: senderId,
             type: .text,
             text: text,
             mediaUrl: nil,
@@ -49,24 +65,24 @@ final class AppState {
         chats[idx].messages.append(msg)
     }
 
-    func markAllRead(in chatId: String) {
+    func markAllRead(in chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         for i in chats[idx].messages.indices {
             chats[idx].messages[i].isRead = true
         }
     }
 
-    func togglePin(chatId: String) {
+    func togglePin(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].isPinned.toggle()
     }
 
-    func toggleMute(chatId: String) {
+    func toggleMute(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].isMuted.toggle()
     }
 
-    func deleteChat(chatId: String) {
+    func deleteChat(chatId: UUID) {
         chats.removeAll { $0.id == chatId }
     }
 
