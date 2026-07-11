@@ -23,20 +23,34 @@ struct Reaction: Identifiable, Hashable, Codable {
 // MARK: — Message
 
 struct Message: Identifiable, Hashable, Codable {
-    let id: String
-    let chatId: String
-    let senderId: String
+    let id: UUID
+    let chatId: UUID
+    let senderId: UUID
     let type: MessageType
     var text: String?
     var mediaUrl: String?
     var fileName: String?
     var fileSize: Int?          // bytes
     var duration: Double?       // seconds (for voice/video/circle)
-    var reactions: [Reaction]
+    // var reactions: [Reaction] // We will ignore reactions in DB for now to keep it simple, or handle later
     let timestamp: Date
     var isRead: Bool
     var isEdited: Bool
-    var replyToId: String?      // message id being replied to
+    var replyToId: UUID?      // message id being replied to
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, text
+        case chatId = "chat_id"
+        case senderId = "sender_id"
+        case mediaUrl = "media_url"
+        case fileName = "file_name"
+        case fileSize = "file_size"
+        case duration
+        case timestamp = "created_at"
+        case isRead = "is_read"
+        case isEdited = "is_edited"
+        case replyToId = "reply_to_id"
+    }
 
     var isFromMe: Bool { senderId == User.me.id }
 
@@ -58,13 +72,13 @@ struct Message: Identifiable, Hashable, Codable {
 extension Message {
     static func make(
         _ text: String,
-        from senderId: String,
-        chatId: String,
+        from senderId: UUID,
+        chatId: UUID,
         offset: TimeInterval,
         isRead: Bool = true
     ) -> Message {
         Message(
-            id: UUID().uuidString,
+            id: UUID(),
             chatId: chatId,
             senderId: senderId,
             type: .text,
@@ -73,7 +87,6 @@ extension Message {
             fileName: nil,
             fileSize: nil,
             duration: nil,
-            reactions: [],
             timestamp: Date().addingTimeInterval(offset),
             isRead: isRead,
             isEdited: false,

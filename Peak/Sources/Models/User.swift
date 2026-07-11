@@ -1,13 +1,20 @@
 import Foundation
 
 struct User: Identifiable, Hashable, Codable {
-    let id: String
+    let id: UUID
     var username: String
     var bio: String
     var avatarUrl: String?
     var isOnline: Bool
     var lastSeen: Date?
     var phone: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, username, bio, phone
+        case avatarUrl = "avatar_url"
+        case isOnline = "is_online"
+        case lastSeen = "last_seen"
+    }
 
     var initials: String {
         let parts = username.split(separator: " ")
@@ -32,7 +39,7 @@ struct User: Identifiable, Hashable, Codable {
 
     // MARK: — Mock Data
     static let me = User(
-        id: "me",
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         username: "Вы",
         bio: "Peak early adopter 🖤",
         avatarUrl: nil,
@@ -41,7 +48,7 @@ struct User: Identifiable, Hashable, Codable {
         phone: "+1 000 000 00 00"
     )
     static let alex = User(
-        id: "u2",
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
         username: "Alex Mercer",
         bio: "Less is more.",
         avatarUrl: nil,
@@ -50,7 +57,7 @@ struct User: Identifiable, Hashable, Codable {
         phone: "+1 234 567 89 00"
     )
     static let sam = User(
-        id: "u3",
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
         username: "Sam Park",
         bio: "Design & coffee.",
         avatarUrl: nil,
@@ -59,7 +66,7 @@ struct User: Identifiable, Hashable, Codable {
         phone: "+1 987 654 32 10"
     )
     static let nina = User(
-        id: "u4",
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!,
         username: "Nina Volkov",
         bio: "Night mode forever.",
         avatarUrl: nil,
@@ -68,7 +75,7 @@ struct User: Identifiable, Hashable, Codable {
         phone: "+7 999 123 45 67"
     )
     static let jay = User(
-        id: "u5",
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000005")!,
         username: "Jay Kim",
         bio: "",
         avatarUrl: nil,

@@ -3,7 +3,7 @@ import Foundation
 // MARK: — Chat
 
 struct Chat: Identifiable, Hashable, Codable {
-    let id: String
+    let id: UUID
     let participants: [User]
     var messages: [Message]
     var isPinned: Bool
@@ -48,49 +48,49 @@ struct Chat: Identifiable, Hashable, Codable {
 extension Chat {
     static let mockChats: [Chat] = {
         let c1 = Chat(
-            id: "c1",
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
             participants: [.me, .alex],
             messages: [
-                .make("Hey! Have you tried Peak yet?",       from: User.alex.id, chatId: "c1", offset: -7200),
-                .make("Just installed it, looks 🔥",          from: User.me.id,  chatId: "c1", offset: -7000),
-                .make("Right? The B&W design is clean af",   from: User.alex.id, chatId: "c1", offset: -6800),
-                .make("Feels like a different era of apps",  from: User.me.id,  chatId: "c1", offset: -6600),
-                .make("Let me know when you add stories",    from: User.alex.id, chatId: "c1", offset: -300,  isRead: false),
+                .make("Hey! Have you tried Peak yet?",       from: User.alex.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!, offset: -7200),
+                .make("Just installed it, looks 🔥",          from: User.me.id,  chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!, offset: -7000),
+                .make("Right? The B&W design is clean af",   from: User.alex.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!, offset: -6800),
+                .make("Feels like a different era of apps",  from: User.me.id,  chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!, offset: -6600),
+                .make("Let me know when you add stories",    from: User.alex.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!, offset: -300,  isRead: false),
             ],
             isPinned: true,
             isMuted: false,
             draftText: nil
         )
         let c2 = Chat(
-            id: "c2",
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!,
             participants: [.me, .sam],
             messages: [
-                .make("Are we meeting tomorrow?",            from: User.sam.id, chatId: "c2", offset: -86400),
-                .make("Yep, 3pm works",                      from: User.me.id,  chatId: "c2", offset: -85000),
-                .make("Perfect. I'll bring the laptop 💻",   from: User.sam.id, chatId: "c2", offset: -84000),
+                .make("Are we meeting tomorrow?",            from: User.sam.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!, offset: -86400),
+                .make("Yep, 3pm works",                      from: User.me.id,  chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!, offset: -85000),
+                .make("Perfect. I'll bring the laptop 💻",   from: User.sam.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!, offset: -84000),
             ],
             isPinned: false,
             isMuted: false,
             draftText: nil
         )
         let c3 = Chat(
-            id: "c3",
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000003")!,
             participants: [.me, .nina],
             messages: [
-                .make("The new dark theme update is 🤍",     from: User.nina.id, chatId: "c3", offset: -172800),
-                .make("Sent you the design files",            from: User.nina.id, chatId: "c3", offset: -172000),
-                .make("Got them, tysm!",                      from: User.me.id,   chatId: "c3", offset: -170000),
+                .make("The new dark theme update is 🤍",     from: User.nina.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000003")!, offset: -172800),
+                .make("Sent you the design files",            from: User.nina.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000003")!, offset: -172000),
+                .make("Got them, tysm!",                      from: User.me.id,   chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000003")!, offset: -170000),
             ],
             isPinned: false,
             isMuted: true,
             draftText: nil
         )
         let c4 = Chat(
-            id: "c4",
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000004")!,
             participants: [.me, .jay],
             messages: [
-                .make("sup",                                  from: User.jay.id, chatId: "c4", offset: -10),
-                .make("not much, just building stuff",        from: User.me.id,  chatId: "c4", offset: -8, isRead: false),
+                .make("sup",                                  from: User.jay.id, chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000004")!, offset: -10),
+                .make("not much, just building stuff",        from: User.me.id,  chatId: UUID(uuidString: "10000000-0000-0000-0000-000000000004")!, offset: -8, isRead: false),
             ],
             isPinned: false,
             isMuted: false,
