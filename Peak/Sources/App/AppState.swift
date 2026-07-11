@@ -20,19 +20,25 @@ final class AppState {
 
     func checkSession() async {
         for await (_, session) in AuthenticationService.shared.authStateChanges {
-            isUserAuthenticated = session != nil
             if session != nil {
                 if let userId = session?.user.id {
                     do {
                         let me: User = try await SupabaseManager.shared.client.from("users").select().eq("id", value: userId).single().execute().value
                         currentUser = me
+                        isUserAuthenticated = true
+                        await loadInitialData()
                     } catch {
                         print("Failed to fetch me: \(error)")
-                        currentUser = User(id: userId, username: "Я", bio: "", avatarUrl: nil, isOnline: true, lastSeen: Date(), phone: nil)
+                        // Force logout if the profile doesn't exist in the database
+                        try? await AuthenticationService.shared.signOut()
+                        isUserAuthenticated = false
+                        currentUser = nil
+                        chats = []
+                        contacts = []
                     }
                 }
-                await loadInitialData()
             } else {
+                isUserAuthenticated = false
                 currentUser = nil
                 chats = []
                 contacts = []
