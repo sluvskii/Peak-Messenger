@@ -240,6 +240,16 @@ final class DatabaseService {
 
     // MARK: — Messages
     
+    func deleteChatParticipant(chatId: UUID) async throws {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        try await client
+            .from("chat_participants")
+            .delete()
+            .eq("chat_id", value: chatId)
+            .eq("user_id", value: myId)
+            .execute()
+    }
+    
     func fetchMessages(for chatId: UUID) async throws -> [Message] {
         try await client
             .from("messages")

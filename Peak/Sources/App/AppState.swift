@@ -244,6 +244,14 @@ final class AppState {
     func deleteChat(chatId: UUID) {
         chats.removeAll { $0.id == chatId }
         saveChatsToCache()
+        
+        Task {
+            do {
+                try await DatabaseService.shared.deleteChatParticipant(chatId: chatId)
+            } catch {
+                print("Failed to delete chat participation: \(error)")
+            }
+        }
     }
 
     private func saveChatsToCache() {

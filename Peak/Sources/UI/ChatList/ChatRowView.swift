@@ -73,6 +73,25 @@ struct ChatRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
+        .contextMenu {
+            Button {
+                appState.togglePin(chatId: chat.id)
+            } label: {
+                Label(chat.isPinned ? "Открепить" : "Закрепить", systemImage: chat.isPinned ? "pin.slash" : "pin")
+            }
+            
+            Button {
+                appState.toggleMute(chatId: chat.id)
+            } label: {
+                Label(chat.isMuted ? "Включить звук" : "Выключить звук", systemImage: chat.isMuted ? "bell" : "bell.slash")
+            }
+            
+            Button(role: .destructive) {
+                appState.deleteChat(chatId: chat.id)
+            } label: {
+                Label("Удалить чат", systemImage: "trash")
+            }
+        }
     }
 }
 
