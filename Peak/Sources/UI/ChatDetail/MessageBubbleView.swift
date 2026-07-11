@@ -43,7 +43,38 @@ struct MessageBubbleView: View {
                         .stroke(PeakColors.divider, lineWidth: isFromMe ? 0 : 0.5)
                 )
 
-        case .image, .video, .circle, .file, .voice:
+        case .image:
+            if let mediaUrlString = message.mediaUrl, let url = URL(string: mediaUrlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 200, height: 200)
+                            .background(PeakColors.surface)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 240, maxHeight: 300)
+                    case .failure:
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.system(size: 40))
+                            .foregroundStyle(PeakColors.textSecondary)
+                            .frame(width: 200, height: 200)
+                            .background(PeakColors.surface)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else {
+                Text("Image missing")
+                    .font(PeakTypography.callout)
+                    .foregroundStyle(PeakColors.textSecondary)
+                    .padding()
+            }
+
+        case .video, .circle, .file, .voice:
             HStack(spacing: 10) {
                 Image(systemName: mediaIcon)
                     .font(.system(size: 22, weight: .light))

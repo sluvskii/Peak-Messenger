@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: — Profile Screen
 
@@ -6,6 +7,9 @@ struct ProfileView: View {
     @Environment(AppState.self) private var appState
 
     var user: User { appState.currentUser ?? .me }
+    
+    @State private var isUploadingAvatar = false
+    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -29,20 +33,56 @@ struct ProfileView: View {
             .navigationTitle("Профиль")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .onChange(of: selectedItem) { _, newItem in
+                Task {
+                    await handleAvatarSelection(newItem)
+                }
+            }
         }
     }
+
+    @State private var isEditingUsername = false
+    @State private var newUsername = ""
 
     // MARK: — Header
 
     private var headerSection: some View {
         VStack(spacing: 14) {
-            AvatarView(user: user, size: 86, showOnline: false)
-                .padding(.top, 20)
+            PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(user: user, size: 86, showOnline: false)
+                        .overlay {
+                            if isUploadingAvatar {
+                                ProgressView()
+                                    .padding()
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                            }
+                        }
+                    
+                    Image(systemName: "camera.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(PeakColors.accent, .white)
+                        .offset(x: 4, y: 4)
+                }
+            }
+            .padding(.top, 20)
+            .disabled(isUploadingAvatar)
 
             VStack(spacing: 4) {
-                Text(user.username)
-                    .font(PeakTypography.display)
-                    .foregroundStyle(PeakColors.textPrimary)
+                HStack(spacing: 6) {
+                    Text(user.username)
+                        .font(PeakTypography.display)
+                        .foregroundStyle(PeakColors.textPrimary)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(PeakColors.textTertiary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    newUsername = user.username
+                    isEditingUsername = true
+                }
 
                 if !user.bio.isEmpty {
                     Text(user.bio)
@@ -53,6 +93,50 @@ struct ProfileView: View {
             }
         }
         .padding(.bottom, 20)
+        .alert("Изменить имя", isPresented: $isEditingUsername) {
+            TextField("Новое имя", text: $newUsername)
+            Button("Отмена", role: .cancel) { }
+            Button("Сохранить") {
+                Task {
+                    await saveUsername(newUsername)
+                }
+            }
+        }
+    }
+
+    private func saveUsername(_ name: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        do {
+            try await DatabaseService.shared.updateUsername(trimmed)
+            appState.currentUser?.username = trimmed
+        } catch {
+            print("Failed to update username: \(error)")
+        }
+    }
+
+    // MARK: — Avatar Handling
+    
+    private func handleAvatarSelection(_ item: PhotosPickerItem?) async {
+        guard let item = item, let data = try? await item.loadTransferable(type: Data.self) else { return }
+        guard let userId = appState.currentUser?.id else { return }
+        
+        isUploadingAvatar = true
+        do {
+            let path = "\(userId)/avatar_\(Date().timeIntervalSince1970).jpg"
+            let url = try await StorageService.shared.uploadMedia(data, bucket: "avatars", path: path, contentType: "image/jpeg")
+            
+            // Update database
+            try await DatabaseService.shared.updateAvatarUrl(url.absoluteString)
+            
+            // Update local state
+            appState.currentUser?.avatarUrl = url.absoluteString
+        } catch {
+            print("Failed to upload avatar: \(error)")
+        }
+        isUploadingAvatar = false
+        selectedItem = nil
     }
 
     // MARK: — Info

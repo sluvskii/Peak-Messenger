@@ -1,12 +1,25 @@
 import Foundation
+import Supabase
 
-// Firebase Storage integration will be added here once Firebase is configured.
 @MainActor
 final class StorageService {
     static let shared = StorageService()
     private init() {}
 
-    func uploadMedia(_ data: Data, path: String) async throws -> URL {
-        throw URLError(.unsupportedURL)
+    private var client: SupabaseClient { SupabaseManager.shared.client }
+
+    func uploadMedia(_ data: Data, bucket: String, path: String, contentType: String) async throws -> URL {
+        // Upload the file
+        try await client.storage
+            .from(bucket)
+            .upload(
+                path,
+                data: data,
+                options: FileOptions(contentType: contentType)
+            )
+
+        // Generate public URL
+        let url = try client.storage.from(bucket).getPublicURL(path: path)
+        return url
     }
 }

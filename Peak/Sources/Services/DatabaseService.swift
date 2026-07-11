@@ -18,6 +18,64 @@ final class DatabaseService {
             .execute()
             .value
     }
+    
+    func updateAvatarUrl(_ url: String) async throws {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        struct UpdateAvatar: Encodable { let avatar_url: String }
+        try await client
+            .from("users")
+            .update(UpdateAvatar(avatar_url: url))
+            .eq("id", value: myId)
+            .execute()
+    }
+    
+    func updateUsername(_ name: String) async throws {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        struct UpdateName: Encodable { let username: String }
+        try await client
+            .from("users")
+            .update(UpdateName(username: name))
+            .eq("id", value: myId)
+            .execute()
+    }
+    
+    func updatePresence(isOnline: Bool) async throws {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        struct UpdatePresenceModel: Encodable { 
+            let is_online: Bool
+            let last_seen: String // ISO8601 string
+        }
+        let now = ISO8601DateFormatter().string(from: Date())
+        try await client
+            .from("users")
+            .update(UpdatePresenceModel(is_online: isOnline, last_seen: now))
+            .eq("id", value: myId)
+            .execute()
+    }
+
+    func listenForUserUpdates() async throws -> AsyncStream<User> {
+        let channel = client.channel("users:all")
+        let stream = channel.postgresChange(
+            UpdateAction.self,
+            schema: "public",
+            table: "users"
+        )
+        Task { try? await channel.subscribeWithError() }
+        
+        return AsyncStream { continuation in
+            Task {
+                for await action in stream {
+                    do {
+                        let data = try JSONEncoder().encode(action.record)
+                        let user = try JSONDecoder().decode(User.self, from: data)
+                        continuation.yield(user)
+                    } catch {
+                        print("Failed to decode user update: \(error)")
+                    }
+                }
+            }
+        }
+    }
 
     // MARK: — Chats
 
@@ -198,6 +256,31 @@ final class DatabaseService {
             .insert(message)
             .execute()
     }
+    
+    func updateMessage(_ message: Message) async throws {
+        struct UpdateContent: Encodable {
+            let text: String?
+            let type: Message.MessageType
+            let is_edited: Bool
+        }
+        
+        try await client
+            .from("messages")
+            .update(UpdateContent(text: message.text, type: message.type, is_edited: message.isEdited))
+            .eq("id", value: message.id)
+            .execute()
+    }
+
+    func markMessagesAsRead(in chatId: UUID, myId: UUID) async throws {
+        struct UpdateRead: Encodable { let is_read: Bool }
+        try await client
+            .from("messages")
+            .update(UpdateRead(is_read: true))
+            .eq("chat_id", value: chatId)
+            .neq("sender_id", value: myId)
+            .eq("is_read", value: false)
+            .execute()
+    }
 
     func listenForMessages(in chatId: UUID) async throws -> AsyncStream<Message> {
         let channel = client.channel("messages:chat_id=eq.\(chatId)")
@@ -220,6 +303,30 @@ final class DatabaseService {
                         continuation.yield(msg)
                     } catch {
                         print("Failed to decode message: \(error)")
+                    }
+                }
+            }
+        }
+    }
+    func listenForAllMessages() async throws -> AsyncStream<Message> {
+        let channel = client.channel("messages:all")
+        let stream = channel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "messages"
+        )
+        Task { try? await channel.subscribeWithError() }
+        
+        return AsyncStream { continuation in
+            Task {
+                for await action in stream {
+                    do {
+                        let data = try JSONEncoder().encode(action.record)
+                        let decoder = JSONDecoder()
+                        let msg = try decoder.decode(Message.self, from: data)
+                        continuation.yield(msg)
+                    } catch {
+                        print("Failed to decode global message: \(error)")
                     }
                 }
             }

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: — Chat Detail Screen
 
@@ -10,11 +11,13 @@ struct ChatDetailView: View {
     @State private var scrollProxy: ScrollViewProxy? = nil
     @FocusState private var isInputFocused: Bool
     
-    @State private var dbMessages: [Message] = []
-    @State private var isLoaded = false
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var isUploadingMedia = false
+    
+    @State private var editingMessage: Message? = nil
 
     private var messages: [Message] {
-        isLoaded ? dbMessages : (appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages)
+        appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages
     }
 
     private var participant: User { chat.otherParticipant(myId: appState.currentUser?.id) ?? .alex }
@@ -26,6 +29,32 @@ struct ChatDetailView: View {
             VStack(spacing: 0) {
                 // Message list
                 messageList
+
+                // Editing banner
+                if let editing = editingMessage {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Редактирование")
+                                .font(PeakTypography.caption)
+                                .foregroundStyle(PeakColors.accent)
+                            Text(editing.displayText)
+                                .font(PeakTypography.body)
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Button {
+                            editingMessage = nil
+                            messageText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(PeakColors.textTertiary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(PeakColors.surface)
+                }
 
                 // Input bar
                 inputBar
@@ -39,9 +68,10 @@ struct ChatDetailView: View {
         .onAppear {
             appState.markAllRead(in: chat.id)
         }
-        .task {
-            await loadMessages()
-            await listenToMessages()
+        .onChange(of: selectedItem) { _, newItem in
+            Task {
+                await handleMediaSelection(newItem)
+            }
         }
     }
 
@@ -58,6 +88,24 @@ struct ChatDetailView: View {
                                 insertion: .push(from: .bottom).combined(with: .opacity),
                                 removal: .opacity
                             ))
+                            .contextMenu {
+                                if message.isFromMe(myId: appState.currentUser?.id) {
+                                    if message.type == .text {
+                                        Button {
+                                            editingMessage = message
+                                            messageText = message.text ?? ""
+                                            isInputFocused = true
+                                        } label: {
+                                            Label("Редактировать", systemImage: "pencil")
+                                        }
+                                    }
+                                    Button(role: .destructive) {
+                                        deleteMessage(message)
+                                    } label: {
+                                        Label("Удалить", systemImage: "trash")
+                                    }
+                                }
+                            }
                     }
                 }
                 .padding(.vertical, 8)
@@ -82,14 +130,18 @@ struct ChatDetailView: View {
 
             HStack(alignment: .bottom, spacing: 10) {
                 // Attachment
-                Button {
-                    // future: show attachment picker
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(PeakColors.textSecondary)
-                        .frame(width: 36, height: 36)
+                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                    if isUploadingMedia {
+                        ProgressView()
+                            .frame(width: 36, height: 36)
+                    } else {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22, weight: .regular))
+                            .foregroundStyle(PeakColors.textSecondary)
+                            .frame(width: 36, height: 36)
+                    }
                 }
+                .disabled(isUploadingMedia)
 
                 // Text field
                 TextField("Сообщение", text: $messageText, axis: .vertical)
@@ -165,72 +217,23 @@ struct ChatDetailView: View {
         guard !trimmed.isEmpty else { return }
         messageText = ""
         
-        let senderId = appState.currentUser?.id ?? User.me.id
-        
-        let msg = Message(
-            id: UUID(),
-            chatId: chat.id,
-            senderId: senderId,
-            type: .text,
-            text: trimmed,
-            mediaUrl: nil,
-            fileName: nil,
-            fileSize: nil,
-            duration: nil,
-            timestamp: Date(),
-            isRead: false,
-            isEdited: false,
-            replyToId: nil
-        )
-        
-        // Optimistic UI update
-        if isLoaded {
-            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                dbMessages.append(msg)
-            }
-        }
-        
-        // Update global AppState so ChatList updates
-        if let idx = appState.chats.firstIndex(where: { $0.id == chat.id }) {
-            appState.chats[idx].messages.append(msg)
-        }
-        
-        Task {
-            do {
-                try await DatabaseService.shared.sendMessage(msg)
-            } catch {
-                print("Send error: \(error)")
-            }
+        if let editing = editingMessage {
+            var updatedMessage = editing
+            updatedMessage.text = trimmed
+            updatedMessage.isEdited = true
+            
+            appState.updateMessage(updatedMessage)
+            editingMessage = nil
+        } else {
+            appState.send(trimmed, in: chat.id)
         }
     }
     
-    private func loadMessages() async {
-        do {
-            let fetched = try await DatabaseService.shared.fetchMessages(for: chat.id)
-            withAnimation {
-                dbMessages = fetched
-                isLoaded = true
-            }
-        } catch {
-            print("Fetch error: \(error)")
-            isLoaded = true // Show empty or mock
-        }
-    }
-    
-    private func listenToMessages() async {
-        do {
-            let stream = try await DatabaseService.shared.listenForMessages(in: chat.id)
-            for await msg in stream {
-                // Avoid duplicating optimistic message
-                if !dbMessages.contains(where: { $0.id == msg.id }) {
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                        dbMessages.append(msg)
-                    }
-                }
-            }
-        } catch {
-            print("Stream error: \(error)")
-        }
+    private func deleteMessage(_ message: Message) {
+        var deletedMsg = message
+        deletedMsg.type = .deleted
+        deletedMsg.text = "Сообщение удалено"
+        appState.updateMessage(deletedMsg)
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
@@ -242,6 +245,40 @@ struct ChatDetailView: View {
         } else {
             proxy.scrollTo(last.id, anchor: .bottom)
         }
+    }
+    
+    private func handleMediaSelection(_ item: PhotosPickerItem?) async {
+        guard let item = item, let data = try? await item.loadTransferable(type: Data.self) else { return }
+        guard let userId = appState.currentUser?.id else { return }
+        
+        isUploadingMedia = true
+        do {
+            let path = "\(chat.id)/\(UUID().uuidString).jpg"
+            let url = try await StorageService.shared.uploadMedia(data, bucket: "messages", path: path, contentType: "image/jpeg")
+            
+            // Create and send image message
+            let msg = Message(
+                id: UUID(),
+                chatId: chat.id,
+                senderId: userId,
+                type: .image,
+                text: "",
+                mediaUrl: url.absoluteString,
+                fileName: nil,
+                fileSize: Int64(data.count),
+                duration: nil,
+                timestamp: Date(),
+                isRead: false,
+                isEdited: false,
+                replyToId: nil
+            )
+            
+            appState.send(msg) // We need to update AppState to handle full message sending
+        } catch {
+            print("Failed to upload media: \(error)")
+        }
+        isUploadingMedia = false
+        selectedItem = nil
     }
 }
 

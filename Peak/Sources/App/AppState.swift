@@ -58,25 +58,70 @@ final class AppState {
             
             self.chats = try await DatabaseService.shared.fetchMyChats()
             
-            // Listen for messages in all chats
-            for chat in self.chats {
-                Task {
-                    do {
-                        for try await message in try await DatabaseService.shared.listenForMessages(in: chat.id) {
-                            if let idx = self.chats.firstIndex(where: { $0.id == chat.id }) {
-                                // append message if it doesn't already exist
-                                if !self.chats[idx].messages.contains(where: { $0.id == message.id }) {
-                                    self.chats[idx].messages.append(message)
-                                }
-                            }
-                        }
-                    } catch {
-                        print("Listen messages error: \(error)")
-                    }
-                }
-            }
+            // Start global listeners
+            startGlobalMessageListener()
+            startGlobalUserListener()
+            
         } catch {
             print("Failed to load initial data: \(error)")
+        }
+    }
+
+    private func startGlobalMessageListener() {
+        Task {
+            do {
+                let stream = try await DatabaseService.shared.listenForAllMessages()
+                for await message in stream {
+                    handleIncomingMessage(message)
+                }
+            } catch {
+                print("Global listen error: \(error)")
+            }
+        }
+    }
+    
+    private func startGlobalUserListener() {
+        Task {
+            do {
+                let stream = try await DatabaseService.shared.listenForUserUpdates()
+                for await user in stream {
+                    if let idx = contacts.firstIndex(where: { $0.id == user.id }) {
+                        contacts[idx] = user
+                    }
+                    // Also update participants in chats
+                    for i in chats.indices {
+                        if let pIdx = chats[i].participants.firstIndex(where: { $0.id == user.id }) {
+                            chats[i].participants[pIdx] = user
+                        }
+                    }
+                }
+            } catch {
+                print("User listen error: \(error)")
+            }
+        }
+    }
+    
+    private func handleIncomingMessage(_ message: Message) {
+        if let idx = chats.firstIndex(where: { $0.id == message.chatId }) {
+            if let msgIdx = chats[idx].messages.firstIndex(where: { $0.id == message.id }) {
+                // Update existing message
+                chats[idx].messages[msgIdx] = message
+            } else {
+                // Append new message
+                chats[idx].messages.append(message)
+            }
+        } else {
+            // New chat! We need to fetch it and add it.
+            Task {
+                do {
+                    let allChats = try await DatabaseService.shared.fetchMyChats()
+                    if let newChat = allChats.first(where: { $0.id == message.chatId }) {
+                        self.chats.append(newChat)
+                    }
+                } catch {
+                    print("Failed to fetch new chat: \(error)")
+                }
+            }
         }
     }
 
@@ -95,7 +140,6 @@ final class AppState {
 
     func send(_ text: String, in chatId: UUID) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let idx = chats.firstIndex(where: { $0.id == chatId }),
               let senderId = currentUser?.id else { return }
         let msg = Message(
             id: UUID(),
@@ -112,22 +156,58 @@ final class AppState {
             isEdited: false,
             replyToId: nil
         )
+        send(msg)
+    }
+    
+    func send(_ message: Message) {
+        guard let idx = chats.firstIndex(where: { $0.id == message.chatId }) else { return }
+        
         // Optimistic update
-        chats[idx].messages.append(msg)
+        chats[idx].messages.append(message)
         
         Task {
             do {
-                try await DatabaseService.shared.sendMessage(msg)
+                try await DatabaseService.shared.sendMessage(message)
             } catch {
                 print("Failed to send message: \(error)")
+            }
+        }
+    }
+    
+    func updateMessage(_ message: Message) {
+        guard let chatIdx = chats.firstIndex(where: { $0.id == message.chatId }),
+              let msgIdx = chats[chatIdx].messages.firstIndex(where: { $0.id == message.id }) else { return }
+        
+        chats[chatIdx].messages[msgIdx] = message
+        
+        Task {
+            do {
+                try await DatabaseService.shared.updateMessage(message)
+            } catch {
+                print("Failed to update message in DB: \(error)")
             }
         }
     }
 
     func markAllRead(in chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        
+        var needsUpdate = false
         for i in chats[idx].messages.indices {
-            chats[idx].messages[i].isRead = true
+            if !chats[idx].messages[i].isRead && !chats[idx].messages[i].isFromMe(myId: currentUser?.id) {
+                chats[idx].messages[i].isRead = true
+                needsUpdate = true
+            }
+        }
+        
+        if needsUpdate, let myId = currentUser?.id {
+            Task {
+                do {
+                    try await DatabaseService.shared.markMessagesAsRead(in: chatId, myId: myId)
+                } catch {
+                    print("Failed to mark messages as read in DB: \(error)")
+                }
+            }
         }
     }
 

@@ -9,15 +9,29 @@ struct AvatarView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Circle()
-                .fill(PeakColors.avatarTint(for: user.id.uuidString))
-                .shadow(color: PeakColors.avatarTint(for: user.id.uuidString).opacity(0.15), radius: size * 0.15, y: size * 0.05)
-                .frame(width: size, height: size)
-                .overlay(
-                    Text(user.initials)
-                        .font(.system(size: size * 0.36, weight: .semibold))
-                        .foregroundStyle(PeakColors.textPrimary)
-                )
+            if let urlString = user.avatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: size, height: size)
+                            .background(PeakColors.avatarTint(for: user.id.uuidString))
+                            .clipShape(Circle())
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: size, height: size)
+                            .clipShape(Circle())
+                    case .failure:
+                        fallbackAvatar
+                    @unknown default:
+                        fallbackAvatar
+                    }
+                }
+            } else {
+                fallbackAvatar
+            }
 
             if showOnline && user.isOnline {
                 Circle()
@@ -31,6 +45,18 @@ struct AvatarView: View {
                     .offset(x: 1, y: 1)
             }
         }
+    }
+    
+    private var fallbackAvatar: some View {
+        Circle()
+            .fill(PeakColors.avatarTint(for: user.id.uuidString))
+            .shadow(color: PeakColors.avatarTint(for: user.id.uuidString).opacity(0.15), radius: size * 0.15, y: size * 0.05)
+            .frame(width: size, height: size)
+            .overlay(
+                Text(user.initials)
+                    .font(.system(size: size * 0.36, weight: .semibold))
+                    .foregroundStyle(PeakColors.textPrimary)
+            )
     }
 }
 
