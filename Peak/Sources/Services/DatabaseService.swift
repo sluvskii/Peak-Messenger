@@ -1,6 +1,7 @@
 import Foundation
 
 // Firestore integration will be added here once Firebase is configured.
+@MainActor
 final class DatabaseService {
     static let shared = DatabaseService()
     private init() {}

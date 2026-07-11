@@ -1,8 +1,9 @@
 import Foundation
 import Observation
 
-// MARK: — AppState  (@Observable — iOS 17+)
+// MARK: — AppState  (@Observable + @MainActor — Swift 6 concurrency-safe)
 
+@MainActor
 @Observable
 final class AppState {
 
