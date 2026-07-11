@@ -33,6 +33,11 @@ final class AuthenticationService {
     }
 
     func signOut() async throws {
-        try await client.auth.signOut()
+        do {
+            try await client.auth.signOut()
+        } catch {
+            print("Server sign out failed: \(error), forcing local sign out")
+            try? await client.auth.signOut(scope: .local)
+        }
     }
 }
