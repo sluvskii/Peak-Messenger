@@ -11,12 +11,12 @@ final class AppState {
     var selectedTab: Tab = .chats
 
     // MARK: Session
-    var isUserAuthenticated = false
+    var isUserAuthenticated = CacheService.shared.loadUser() != nil
 
     // MARK: Data
-    var chats: [Chat] = []
-    var currentUser: User?
-    var contacts: [User] = []
+    var chats: [Chat] = CacheService.shared.loadChats() ?? []
+    var currentUser: User? = CacheService.shared.loadUser()
+    var contacts: [User] = CacheService.shared.loadContacts() ?? []
 
     func checkSession() async {
         for await (_, session) in AuthenticationService.shared.authStateChanges {
@@ -26,6 +26,7 @@ final class AppState {
                         let me: User = try await SupabaseManager.shared.client.from("users").select().eq("id", value: userId).single().execute().value
                         currentUser = me
                         isUserAuthenticated = true
+                        CacheService.shared.saveUser(me)
                         await loadInitialData()
                     } catch {
                         print("Failed to fetch me: \(error)")
@@ -35,6 +36,7 @@ final class AppState {
                         currentUser = nil
                         chats = []
                         contacts = []
+                        CacheService.shared.clearAll()
                     }
                 }
             } else {
@@ -42,6 +44,7 @@ final class AppState {
                 currentUser = nil
                 chats = []
                 contacts = []
+                CacheService.shared.clearAll()
             }
         }
     }
@@ -55,8 +58,10 @@ final class AppState {
             } else {
                 self.contacts = allUsers
             }
+            CacheService.shared.saveContacts(self.contacts)
             
             self.chats = try await DatabaseService.shared.fetchMyChats()
+            saveChatsToCache()
             
             // Start global listeners
             startGlobalMessageListener()
@@ -87,12 +92,18 @@ final class AppState {
                 for await user in stream {
                     if let idx = contacts.firstIndex(where: { $0.id == user.id }) {
                         contacts[idx] = user
+                        CacheService.shared.saveContacts(contacts)
                     }
                     // Also update participants in chats
+                    var chatsUpdated = false
                     for i in chats.indices {
                         if let pIdx = chats[i].participants.firstIndex(where: { $0.id == user.id }) {
                             chats[i].participants[pIdx] = user
+                            chatsUpdated = true
                         }
+                    }
+                    if chatsUpdated {
+                        saveChatsToCache()
                     }
                 }
             } catch {
@@ -110,6 +121,7 @@ final class AppState {
                 // Append new message
                 chats[idx].messages.append(message)
             }
+            saveChatsToCache()
         } else {
             // New chat! We need to fetch it and add it.
             Task {
@@ -117,6 +129,7 @@ final class AppState {
                     let allChats = try await DatabaseService.shared.fetchMyChats()
                     if let newChat = allChats.first(where: { $0.id == message.chatId }) {
                         self.chats.append(newChat)
+                        saveChatsToCache()
                     }
                 } catch {
                     print("Failed to fetch new chat: \(error)")
@@ -164,6 +177,7 @@ final class AppState {
         
         // Optimistic update
         chats[idx].messages.append(message)
+        saveChatsToCache()
         
         Task {
             do {
@@ -179,6 +193,7 @@ final class AppState {
               let msgIdx = chats[chatIdx].messages.firstIndex(where: { $0.id == message.id }) else { return }
         
         chats[chatIdx].messages[msgIdx] = message
+        saveChatsToCache()
         
         Task {
             do {
@@ -199,6 +214,9 @@ final class AppState {
                 needsUpdate = true
             }
         }
+        if needsUpdate {
+            saveChatsToCache()
+        }
         
         if needsUpdate, let myId = currentUser?.id {
             Task {
@@ -214,15 +232,25 @@ final class AppState {
     func togglePin(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].isPinned.toggle()
+        saveChatsToCache()
     }
 
     func toggleMute(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].isMuted.toggle()
+        saveChatsToCache()
     }
 
     func deleteChat(chatId: UUID) {
         chats.removeAll { $0.id == chatId }
+        saveChatsToCache()
+    }
+
+    private func saveChatsToCache() {
+        let currentChats = self.chats
+        Task.detached {
+            CacheService.shared.saveChats(currentChats)
+        }
     }
 
 
