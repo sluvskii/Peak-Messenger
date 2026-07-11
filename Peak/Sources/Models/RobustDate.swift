@@ -10,7 +10,19 @@ struct RobustDate: Codable, Hashable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        let string = try container.decode(String.self)
+        var string = try container.decode(String.self)
+        
+        // Fix for Supabase 6-digit microseconds: ISO8601DateFormatter expects 3 digits.
+        // E.g. "2026-07-11T17:42:38.123456+00:00" -> truncate to 3 digits before timezone
+        if let dotIndex = string.lastIndex(of: ".") {
+            let timezoneIndex = string.firstIndex(of: "+") ?? string.firstIndex(of: "Z") ?? string.endIndex
+            let fractionLength = string.distance(from: string.index(after: dotIndex), to: timezoneIndex)
+            
+            if fractionLength > 3 {
+                let endOfFraction = string.index(string.index(after: dotIndex), offsetBy: 3)
+                string.replaceSubrange(endOfFraction..<timezoneIndex, with: "")
+            }
+        }
         
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
