@@ -3,6 +3,7 @@ import PhotosUI
 
 // MARK: — Profile Screen
 
+@MainActor
 struct ProfileView: View {
     @Environment(AppState.self) private var appState
 

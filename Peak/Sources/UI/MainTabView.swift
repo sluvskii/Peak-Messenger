@@ -40,6 +40,7 @@ struct MainTabView: View {
         }
     }
     
+    @MainActor
     private func loadProfileImage(url: String?) async {
         guard let urlString = url, let url = URL(string: urlString) else {
             profileImage = nil
@@ -57,6 +58,7 @@ struct MainTabView: View {
 }
 
 extension UIImage {
+    @MainActor
     func circularImage(size: CGFloat) -> UIImage? {
         // First scale the image to fill the target size
         let rect = CGRect(x: 0, y: 0, width: size, height: size)
