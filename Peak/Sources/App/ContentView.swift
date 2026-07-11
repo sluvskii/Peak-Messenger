@@ -1,6 +1,7 @@
 import SwiftUI
 
 // ContentView is a passthrough — root is MainTabView injected from PeakApp
+@MainActor
 struct ContentView: View {
     @Environment(AppState.self) private var appState
 

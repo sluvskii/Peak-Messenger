@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: — Chat List Screen
 
+@MainActor
 struct ChatListView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""

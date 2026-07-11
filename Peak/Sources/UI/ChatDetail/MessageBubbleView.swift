@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: — Message Bubble
 
+@MainActor
 struct MessageBubbleView: View {
     @Environment(AppState.self) private var appState
     let message: Message

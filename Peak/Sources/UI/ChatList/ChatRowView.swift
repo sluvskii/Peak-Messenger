@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: — Chat List Row
 
+@MainActor
 struct ChatRowView: View {
     let chat: Chat
 

@@ -1,6 +1,7 @@
 import SwiftUI
 import Supabase
 
+@MainActor
 struct LoginView: View {
     @State private var email = ""
     @State private var password = ""

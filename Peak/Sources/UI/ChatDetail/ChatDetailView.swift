@@ -3,6 +3,7 @@ import PhotosUI
 
 // MARK: — Chat Detail Screen
 
+@MainActor
 struct ChatDetailView: View {
     let chat: Chat
     @Environment(AppState.self) private var appState

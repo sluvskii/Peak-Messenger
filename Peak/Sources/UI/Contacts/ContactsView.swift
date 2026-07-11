@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: — Contacts Screen
 
+@MainActor
 struct ContactsView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
