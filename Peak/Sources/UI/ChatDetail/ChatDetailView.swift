@@ -15,6 +15,9 @@ struct ChatDetailView: View {
     @State private var isUploadingMedia = false
     
     @State private var editingMessage: Message? = nil
+    
+    @State private var showUploadError = false
+    @State private var uploadError = ""
 
     private var messages: [Message] {
         appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages
@@ -72,6 +75,11 @@ struct ChatDetailView: View {
             Task {
                 await handleMediaSelection(newItem)
             }
+        }
+        .alert("Ошибка загрузки", isPresented: $showUploadError) {
+            Button("Ок", role: .cancel) { }
+        } message: {
+            Text(uploadError)
         }
     }
 
@@ -276,9 +284,10 @@ struct ChatDetailView: View {
             appState.send(msg) // We need to update AppState to handle full message sending
         } catch {
             print("Failed to upload media: \(error)")
+            uploadError = error.localizedDescription
+            showUploadError = true
         }
         isUploadingMedia = false
-        selectedItem = nil
     }
 }
 

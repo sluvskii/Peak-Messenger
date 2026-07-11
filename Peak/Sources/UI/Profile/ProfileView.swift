@@ -10,6 +10,9 @@ struct ProfileView: View {
     
     @State private var isUploadingAvatar = false
     @State private var selectedItem: PhotosPickerItem? = nil
+    
+    @State private var showUploadError = false
+    @State private var uploadError = ""
 
     var body: some View {
         NavigationStack {
@@ -37,6 +40,11 @@ struct ProfileView: View {
                 Task {
                     await handleAvatarSelection(newItem)
                 }
+            }
+            .alert("Ошибка загрузки", isPresented: $showUploadError) {
+                Button("Ок", role: .cancel) { }
+            } message: {
+                Text(uploadError)
             }
         }
     }
@@ -134,6 +142,8 @@ struct ProfileView: View {
             appState.currentUser?.avatarUrl = url.absoluteString
         } catch {
             print("Failed to upload avatar: \(error)")
+            uploadError = error.localizedDescription
+            showUploadError = true
         }
         isUploadingAvatar = false
         selectedItem = nil
