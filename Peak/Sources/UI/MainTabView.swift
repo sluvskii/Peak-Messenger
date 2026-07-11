@@ -24,11 +24,7 @@ struct MainTabView: View {
             Tab(value: AppState.Tab.profile) {
                 ProfileView()
             } label: {
-                Label {
-                    Text("Профиль")
-                } icon: {
-                    AvatarView(user: appState.currentUser ?? .me, size: 24, showOnline: false)
-                }
+                Label("Профиль", systemImage: "person.crop.circle")
             }
         }
         .tint(PeakColors.textPrimary)
