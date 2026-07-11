@@ -92,6 +92,19 @@ struct ContactsView: View {
     }
     
     private func openChat(with user: User) {
+        // Fast path: Check if we already have this chat in AppState
+        if let existingChat = appState.chats.first(where: { chat in
+            if user.id == appState.currentUser?.id {
+                return chat.participants.count == 1 && chat.participants.first?.id == user.id
+            } else {
+                return chat.participants.count == 2 && chat.participants.contains(where: { $0.id == user.id })
+            }
+        }) {
+            selectedChat = existingChat
+            return
+        }
+        
+        // Slow path: Ask database to get or create
         isLoading = true
         Task {
             do {
@@ -99,6 +112,9 @@ struct ContactsView: View {
                 await MainActor.run {
                     isLoading = false
                     selectedChat = chat
+                    if !appState.chats.contains(where: { $0.id == chat.id }) {
+                        appState.chats.append(chat)
+                    }
                 }
             } catch {
                 print("Failed to open chat: \(error)")
