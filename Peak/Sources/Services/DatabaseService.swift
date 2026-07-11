@@ -155,9 +155,9 @@ final class DatabaseService {
         }
         
         // Create new chat
-        struct ChatInsert: Encodable { }
-        struct ChatResult: Decodable { let id: UUID }
-        let newChat: ChatResult = try await client.from("chats").insert(ChatInsert()).select("id").single().execute().value
+        let newChatId = UUID()
+        struct ChatInsert: Encodable { let id: UUID }
+        try await client.from("chats").insert(ChatInsert(id: newChatId)).execute()
         
         // Insert participants
         struct ParticipantInsert: Encodable {
@@ -166,10 +166,10 @@ final class DatabaseService {
         }
         
         var participantsToInsert: [ParticipantInsert] = [
-            ParticipantInsert(chat_id: newChat.id, user_id: myId)
+            ParticipantInsert(chat_id: newChatId, user_id: myId)
         ]
         if myId != otherUserId {
-            participantsToInsert.append(ParticipantInsert(chat_id: newChat.id, user_id: otherUserId))
+            participantsToInsert.append(ParticipantInsert(chat_id: newChatId, user_id: otherUserId))
         }
         
         try await client.from("chat_participants").insert(participantsToInsert).execute()
@@ -177,7 +177,7 @@ final class DatabaseService {
         let otherUser: User = try await client.from("users").select().eq("id", value: otherUserId).single().execute().value
         let me: User = try await client.from("users").select().eq("id", value: myId).single().execute().value
         
-        return Chat(id: newChat.id, participants: [me, otherUser], messages: [], isPinned: false, isMuted: false, draftText: nil)
+        return Chat(id: newChatId, participants: [me, otherUser], messages: [], isPinned: false, isMuted: false, draftText: nil)
     }
 
     // MARK: — Messages
