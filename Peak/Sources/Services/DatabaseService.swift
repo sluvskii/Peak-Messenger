@@ -112,18 +112,44 @@ final class DatabaseService {
         let myChatIds = myChatsResponse.map { $0.chat_id }
         
         if !myChatIds.isEmpty {
-            let sharedChats: [ParticipantResult] = try await client
+            struct ParticipantUser: Decodable {
+                let chat_id: UUID
+                let user_id: UUID
+            }
+            let allParticipants: [ParticipantUser] = try await client
                 .from("chat_participants")
-                .select("chat_id")
-                .eq("user_id", value: otherUserId)
+                .select("chat_id, user_id")
                 .in("chat_id", values: myChatIds)
                 .execute()
                 .value
                 
-            if let existingChatId = sharedChats.first?.chat_id {
+            var participantsByChat: [UUID: [UUID]] = [:]
+            for p in allParticipants {
+                participantsByChat[p.chat_id, default: []].append(p.user_id)
+            }
+            
+            var existingChatId: UUID?
+            for (chatId, userIds) in participantsByChat {
+                if myId == otherUserId {
+                    if userIds.count == 1 && userIds.contains(myId) {
+                        existingChatId = chatId
+                        break
+                    }
+                } else {
+                    if userIds.count == 2 && userIds.contains(myId) && userIds.contains(otherUserId) {
+                        existingChatId = chatId
+                        break
+                    }
+                }
+            }
+                
+            if let existingChatId = existingChatId {
                 let otherUser: User = try await client.from("users").select().eq("id", value: otherUserId).single().execute().value
                 let me: User = try await client.from("users").select().eq("id", value: myId).single().execute().value
                 
+                // If it's a self chat, participants should just be [me] or [me, me]?
+                // Let's keep it [me, otherUser] even if they are the same so UI logic doesn't break,
+                // but actually participants array in Chat could just have unique users or we just return [me, otherUser]
                 return Chat(id: existingChatId, participants: [me, otherUser], messages: [], isPinned: false, isMuted: false, draftText: nil)
             }
         }
@@ -138,10 +164,15 @@ final class DatabaseService {
             let chat_id: UUID
             let user_id: UUID
         }
-        try await client.from("chat_participants").insert([
-            ParticipantInsert(chat_id: newChat.id, user_id: myId),
-            ParticipantInsert(chat_id: newChat.id, user_id: otherUserId)
-        ]).execute()
+        
+        var participantsToInsert: [ParticipantInsert] = [
+            ParticipantInsert(chat_id: newChat.id, user_id: myId)
+        ]
+        if myId != otherUserId {
+            participantsToInsert.append(ParticipantInsert(chat_id: newChat.id, user_id: otherUserId))
+        }
+        
+        try await client.from("chat_participants").insert(participantsToInsert).execute()
         
         let otherUser: User = try await client.from("users").select().eq("id", value: otherUserId).single().execute().value
         let me: User = try await client.from("users").select().eq("id", value: myId).single().execute().value
