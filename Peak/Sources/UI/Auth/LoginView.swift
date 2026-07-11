@@ -8,6 +8,7 @@ struct LoginView: View {
     @State private var isSignUp = false
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var successMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -21,11 +22,16 @@ struct LoginView: View {
                         .foregroundStyle(PeakColors.textPrimary)
                         .padding(.bottom, 20)
 
-                    // Error Message
+                    // Error/Success Message
                     if let error = errorMessage {
                         Text(error)
                             .font(PeakTypography.caption)
                             .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                    } else if let success = successMessage {
+                        Text(success)
+                            .font(PeakTypography.caption)
+                            .foregroundStyle(.green)
                             .multilineTextAlignment(.center)
                     }
 
@@ -69,6 +75,7 @@ struct LoginView: View {
                         withAnimation {
                             isSignUp.toggle()
                             errorMessage = nil
+                            successMessage = nil
                         }
                     } label: {
                         Text(isSignUp ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Создать")
@@ -93,16 +100,23 @@ struct LoginView: View {
     private func authenticate() async {
         isLoading = true
         errorMessage = nil
+        successMessage = nil
         do {
             if isSignUp {
                 try await AuthenticationService.shared.signUp(email: email, password: password, username: username)
-                // Fallback to sign in directly if sign up successful but needs session
-                try await AuthenticationService.shared.signIn(email: email, password: password)
+                successMessage = "Успешно! Проверьте вашу почту для подтверждения аккаунта."
             } else {
                 try await AuthenticationService.shared.signIn(email: email, password: password)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            let errString = error.localizedDescription
+            if errString.contains("Email not confirmed") {
+                errorMessage = "Почта не подтверждена. Проверьте входящие письма."
+            } else if errString.contains("Invalid login credentials") {
+                errorMessage = "Неверный email или пароль."
+            } else {
+                errorMessage = errString
+            }
         }
         isLoading = false
     }
