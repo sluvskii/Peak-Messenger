@@ -7,11 +7,10 @@ import Observation
 @Observable
 final class AppState {
 
-    // MARK: Navigation
+    // MARK: — Navigation & UI State
     var selectedTab: Tab = .chats
-
-    // MARK: Session
-    var isUserAuthenticated = CacheService.shared.loadUser() != nil
+    var isUserAuthenticated: Bool = CacheService.shared.loadUser() != nil
+    var viewingImageURL: URL? = nil
 
     // MARK: Data
     var chats: [Chat] = CacheService.shared.loadChats() ?? []

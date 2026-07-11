@@ -100,6 +100,9 @@ struct MessageBubbleView: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .onTapGesture {
+                    appState.viewingImageURL = url
+                }
             } else {
                 Text("Image missing")
                     .font(PeakTypography.callout)
