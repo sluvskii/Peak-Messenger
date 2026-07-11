@@ -321,7 +321,7 @@ final class DatabaseService {
             Task {
                 for await action in stream {
                     do {
-                        let record: AnyJSON
+                        let record: [String: AnyJSON]
                         switch action {
                         case .insert(let insertAction): record = insertAction.record
                         case .update(let updateAction): record = updateAction.record
