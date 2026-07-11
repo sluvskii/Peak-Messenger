@@ -21,14 +21,13 @@ struct MainTabView: View {
                 Label("Contacts", systemImage: "person.2")
             }
 
-            // Profile tab: real avatar instead of system icon
             Tab(value: AppState.Tab.profile) {
                 ProfileView()
             } label: {
                 Label {
                     Text("Profile")
                 } icon: {
-                    AvatarView(user: appState.currentUser, size: 26, showOnline: false)
+                    AvatarView(user: appState.currentUser, size: 24, showOnline: false)
                 }
             }
         }
