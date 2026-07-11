@@ -5,7 +5,6 @@ import SwiftUI
 struct ChatListView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var searchActive = false
 
     private var filteredChats: [Chat] {
         let sorted = appState.chats.sorted {
@@ -32,12 +31,7 @@ struct ChatListView: View {
             }
             .navigationTitle("Peak")
             .navigationBarTitleDisplayMode(.large)
-            .searchable(
-                text: $searchText,
-                isPresented: $searchActive,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search conversations"
-            )
+            .searchable(text: $searchText, prompt: "Search conversations")
             .toolbar { toolbarContent }
             .toolbarBackground(.hidden, for: .navigationBar)
         }
