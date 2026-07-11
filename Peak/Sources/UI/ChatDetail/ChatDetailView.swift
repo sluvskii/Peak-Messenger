@@ -9,9 +9,12 @@ struct ChatDetailView: View {
     @State private var messageText = ""
     @State private var scrollProxy: ScrollViewProxy? = nil
     @FocusState private var isInputFocused: Bool
+    
+    @State private var dbMessages: [Message] = []
+    @State private var isLoaded = false
 
     private var messages: [Message] {
-        appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages
+        isLoaded ? dbMessages : (appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages)
     }
 
     private var participant: User { chat.otherParticipant ?? .alex }
@@ -35,6 +38,10 @@ struct ChatDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             appState.markAllRead(in: chat.id)
+        }
+        .task {
+            await loadMessages()
+            await listenToMessages()
         }
     }
 
@@ -156,10 +163,69 @@ struct ChatDetailView: View {
     private func send() {
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-            appState.send(trimmed, in: chat.id)
-        }
         messageText = ""
+        
+        guard let senderId = appState.currentUser?.id ?? User.me.id else { return }
+        
+        let msg = Message(
+            id: UUID(),
+            chatId: chat.id,
+            senderId: senderId,
+            type: .text,
+            text: trimmed,
+            mediaUrl: nil,
+            fileName: nil,
+            fileSize: nil,
+            duration: nil,
+            timestamp: Date(),
+            isRead: false,
+            isEdited: false,
+            replyToId: nil
+        )
+        
+        // Optimistic UI update
+        if isLoaded {
+            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                dbMessages.append(msg)
+            }
+        }
+        
+        Task {
+            do {
+                try await DatabaseService.shared.sendMessage(msg)
+            } catch {
+                print("Send error: \(error)")
+            }
+        }
+    }
+    
+    private func loadMessages() async {
+        do {
+            let fetched = try await DatabaseService.shared.fetchMessages(for: chat.id)
+            withAnimation {
+                dbMessages = fetched
+                isLoaded = true
+            }
+        } catch {
+            print("Fetch error: \(error)")
+            isLoaded = true // Show empty or mock
+        }
+    }
+    
+    private func listenToMessages() async {
+        do {
+            let stream = try await DatabaseService.shared.listenForMessages(in: chat.id)
+            for await msg in stream {
+                // Avoid duplicating optimistic message
+                if !dbMessages.contains(where: { $0.id == msg.id }) {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                        dbMessages.append(msg)
+                    }
+                }
+            }
+        } catch {
+            print("Stream error: \(error)")
+        }
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
