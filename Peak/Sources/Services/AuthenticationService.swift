@@ -9,7 +9,15 @@ final class AuthenticationService {
     
     private var client: SupabaseClient { SupabaseManager.shared.client }
 
-    /// Returns an async stream of auth state changes (e.g. signedIn, signedOut)
+    /// Returns the current authenticated user's ID
+    var currentUserId: UUID? {
+        // In v2, session is async, but we might have it cached if using an observable state
+        // For synchronous access we need to await it, or just use AppState.
+        // Let's implement an async version:
+        get async {
+            try? await client.auth.session().user.id
+        }
+    }
     var authStateChanges: AsyncStream<(AuthChangeEvent, Session?)> {
         client.auth.authStateChanges
     }

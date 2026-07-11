@@ -9,6 +9,81 @@ final class DatabaseService {
 
     private var client: SupabaseClient { SupabaseManager.shared.client }
 
+    // MARK: — Users
+
+    func fetchAllUsers() async throws -> [User] {
+        try await client
+            .from("users")
+            .select()
+            .execute()
+            .value
+    }
+
+    // MARK: — Chats
+
+    func getOrCreateChat(with otherUserId: UUID) async throws -> Chat {
+        guard let myId = try await AuthenticationService.shared.currentUserId else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        
+        // Check if chat exists
+        // A simple query: find chat where we both are participants.
+        // We can call an RPC, but doing it in swift via select:
+        struct ParticipantResult: Decodable {
+            let chat_id: UUID
+        }
+        // This is a naive approach, best done via Postgres RPC, but let's try direct for MVP:
+        // Or simply create a new chat every time for prototyping, but let's do a simple RPC or just create it.
+        // To avoid complexity, let's just create a chat and add both.
+        
+        // Actually, we can fetch all our chats and see if otherUser is in it.
+        let myChatsResponse: [ParticipantResult] = try await client
+            .from("chat_participants")
+            .select("chat_id")
+            .eq("user_id", value: myId)
+            .execute()
+            .value
+            
+        let myChatIds = myChatsResponse.map { $0.chat_id }
+        
+        if !myChatIds.isEmpty {
+            let sharedChats: [ParticipantResult] = try await client
+                .from("chat_participants")
+                .select("chat_id")
+                .eq("user_id", value: otherUserId)
+                .in("chat_id", value: myChatIds)
+                .execute()
+                .value
+                
+            if let existingChatId = sharedChats.first?.chat_id {
+                let otherUser: User = try await client.from("users").select().eq("id", value: otherUserId).single().execute().value
+                let me: User = try await client.from("users").select().eq("id", value: myId).single().execute().value
+                
+                return Chat(id: existingChatId, participants: [me, otherUser], messages: [], isPinned: false, isMuted: false, draftText: nil)
+            }
+        }
+        
+        // Create new chat
+        struct ChatInsert: Encodable { }
+        struct ChatResult: Decodable { let id: UUID }
+        let newChat: ChatResult = try await client.from("chats").insert(ChatInsert()).select("id").single().execute().value
+        
+        // Insert participants
+        struct ParticipantInsert: Encodable {
+            let chat_id: UUID
+            let user_id: UUID
+        }
+        try await client.from("chat_participants").insert([
+            ParticipantInsert(chat_id: newChat.id, user_id: myId),
+            ParticipantInsert(chat_id: newChat.id, user_id: otherUserId)
+        ]).execute()
+        
+        let otherUser: User = try await client.from("users").select().eq("id", value: otherUserId).single().execute().value
+        let me: User = try await client.from("users").select().eq("id", value: myId).single().execute().value
+        
+        return Chat(id: newChat.id, participants: [me, otherUser], messages: [], isPinned: false, isMuted: false, draftText: nil)
+    }
+
     // MARK: — Messages
     
     func fetchMessages(for chatId: UUID) async throws -> [Message] {
