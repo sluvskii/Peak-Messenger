@@ -5,6 +5,7 @@ import SwiftUI
 struct ChatDetailView: View {
     let chat: Chat
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
     @State private var messageText = ""
     @State private var scrollProxy: ScrollViewProxy? = nil
@@ -31,7 +32,6 @@ struct ChatDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { navBarContent }
-        .toolbarVisibility(.hidden, for: .tabBar)
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             appState.markAllRead(in: chat.id)
@@ -130,6 +130,20 @@ struct ChatDetailView: View {
 
     @ToolbarContentBuilder
     private var navBarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text("Chats")
+                        .font(PeakTypography.body)
+                }
+                .foregroundStyle(PeakColors.textPrimary)
+            }
+        }
+
         ToolbarItem(placement: .principal) {
             Button {
                 // open profile detail
