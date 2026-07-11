@@ -38,6 +38,16 @@ final class DatabaseService {
             .eq("id", value: myId)
             .execute()
     }
+
+    func updateBio(_ bio: String) async throws {
+        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        struct UpdateBio: Encodable { let bio: String }
+        try await client
+            .from("users")
+            .update(UpdateBio(bio: bio))
+            .eq("id", value: myId)
+            .execute()
+    }
     
     func updatePresence(isOnline: Bool) async throws {
         guard let myId = try await AuthenticationService.shared.currentUserId else { return }

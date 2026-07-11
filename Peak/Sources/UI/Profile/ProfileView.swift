@@ -52,6 +52,8 @@ struct ProfileView: View {
 
     @State private var isEditingUsername = false
     @State private var newUsername = ""
+    @State private var isEditingBio = false
+    @State private var newBio = ""
 
     // MARK: — Header
 
@@ -98,6 +100,18 @@ struct ProfileView: View {
                         .font(PeakTypography.callout)
                         .foregroundStyle(PeakColors.textSecondary)
                         .multilineTextAlignment(.center)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            newBio = user.bio
+                            isEditingBio = true
+                        }
+                } else {
+                    Button("Добавить описание") {
+                        newBio = ""
+                        isEditingBio = true
+                    }
+                    .font(PeakTypography.callout)
+                    .foregroundStyle(PeakColors.accent)
                 }
             }
         }
@@ -108,6 +122,15 @@ struct ProfileView: View {
             Button("Сохранить") {
                 Task {
                     await saveUsername(newUsername)
+                }
+            }
+        }
+        .alert("Изменить описание", isPresented: $isEditingBio) {
+            TextField("О себе", text: $newBio)
+            Button("Отмена", role: .cancel) { }
+            Button("Сохранить") {
+                Task {
+                    await saveBio(newBio)
                 }
             }
         }
@@ -122,6 +145,16 @@ struct ProfileView: View {
             appState.currentUser?.username = trimmed
         } catch {
             print("Failed to update username: \(error)")
+        }
+    }
+
+    private func saveBio(_ bio: String) async {
+        let trimmed = bio.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await DatabaseService.shared.updateBio(trimmed)
+            appState.currentUser?.bio = trimmed
+        } catch {
+            print("Failed to update bio: \(error)")
         }
     }
 

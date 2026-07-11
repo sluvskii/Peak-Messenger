@@ -64,7 +64,7 @@ struct ChatDetailView: View {
                 if let replying = replyingMessage {
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Ответ")
+                            Text(appState.chat(for: chat.id)?.participants.first(where: { $0.id == replying.senderId })?.username ?? "Ответ")
                                 .font(PeakTypography.caption)
                                 .foregroundStyle(PeakColors.accent)
                             Text(replying.displayText)
