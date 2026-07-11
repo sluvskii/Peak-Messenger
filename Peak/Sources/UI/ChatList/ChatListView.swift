@@ -4,19 +4,22 @@ struct ChatListView: View {
     @State private var chats: [Chat] = Chat.mockChats
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 PeakColors.pureBlack.ignoresSafeArea()
                 
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(chats) { chat in
-                            NavigationLink(destination: ChatDetailView(chat: chat)) {
+                            NavigationLink(value: chat) {
                                 ChatRowView(chat: chat)
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
+                }
+                .navigationDestination(for: Chat.self) { chat in
+                    ChatDetailView(chat: chat)
                 }
             }
             .navigationTitle("PEAK")
