@@ -14,6 +14,11 @@ struct MessageBubbleView: View {
         }
         return nil
     }
+    
+    private var repliedUser: User? {
+        guard let replied = repliedMessage else { return nil }
+        return appState.chat(for: message.chatId)?.participants.first { $0.id == replied.senderId }
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
@@ -40,16 +45,17 @@ struct MessageBubbleView: View {
                 if let replied = repliedMessage {
                     HStack(spacing: 8) {
                         Capsule()
-                            .fill(PeakColors.accent)
+                            .fill(isFromMe ? PeakColors.black : PeakColors.accent)
                             .frame(width: 2)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Ответ")
+                            Text(repliedUser?.username ?? "Ответ")
                                 .font(PeakTypography.tiny)
-                                .foregroundStyle(PeakColors.accent)
+                                .bold()
+                                .foregroundStyle(isFromMe ? PeakColors.black : PeakColors.accent)
                             Text(replied.displayText)
                                 .font(PeakTypography.caption)
-                                .foregroundStyle(isFromMe ? PeakColors.textSecondary : PeakColors.textSecondary)
+                                .foregroundStyle(isFromMe ? PeakColors.black.opacity(0.6) : PeakColors.textSecondary)
                                 .lineLimit(1)
                         }
                     }
