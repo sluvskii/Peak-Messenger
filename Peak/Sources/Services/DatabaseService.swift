@@ -106,7 +106,7 @@ final class DatabaseService {
     func listenForMessages(in chatId: UUID) async throws -> AsyncStream<Message> {
         let channel = client.channel("messages:chat_id=eq.\(chatId)")
         let stream = channel.postgresChange(
-            AnyAction.self,
+            InsertAction.self,
             schema: "public",
             table: "messages",
             filter: "chat_id=eq.\(chatId)"
