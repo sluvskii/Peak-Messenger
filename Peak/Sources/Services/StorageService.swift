@@ -1,11 +1,11 @@
 import Foundation
 
-class StorageService {
+// Firebase Storage integration will be added here once Firebase is configured.
+final class StorageService {
     static let shared = StorageService()
-    
     private init() {}
-    
-    func uploadMedia(_ data: Data, path: String) {
-        // Stub for Firebase Storage
+
+    func uploadMedia(_ data: Data, path: String) async throws -> URL {
+        throw URLError(.unsupportedURL)
     }
 }

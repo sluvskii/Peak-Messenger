@@ -1,15 +1,14 @@
 import Foundation
 
-class AuthenticationService {
+// Firebase Auth will be integrated here once GoogleService-Info.plist is added.
+// For now this is a stub.
+
+final class AuthenticationService {
     static let shared = AuthenticationService()
-    
     private init() {}
-    
-    func signIn() {
-        // Stub for Firebase Auth
-    }
-    
-    func signOut() {
-        // Stub for Firebase Auth
-    }
+
+    var currentUserId: String? { nil }
+
+    func signIn(phone: String) async throws { }
+    func signOut() throws { }
 }
