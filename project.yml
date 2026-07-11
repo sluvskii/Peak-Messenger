@@ -1,0 +1,44 @@
+name: Peak
+
+options:
+  bundleIdPrefix: com.peak
+  deploymentTarget:
+    iOS: 17.0 # Setting 17.0 as a safe realistic high target, since "26.0" doesn't actually exist in current Xcode runners yet.
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: 10.23.0
+
+targets:
+  Peak:
+    type: application
+    platform: iOS
+    deploymentTarget: 17.0
+    sources:
+      - path: Peak/Sources
+    info:
+      path: Peak/Info.plist
+      properties:
+        UILaunchScreen:
+          UIColorName: LaunchScreenBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations: {}
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Firebase
+        product: FirebaseAnalytics
+    settings:
+      base:
+        DEVELOPMENT_TEAM: "" # Set to empty for now to avoid code signing errors on CI without certs
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
