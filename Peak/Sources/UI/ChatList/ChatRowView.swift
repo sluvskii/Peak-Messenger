@@ -45,7 +45,7 @@ struct ChatRowView: View {
                     // Last message preview
                     HStack(spacing: 4) {
                         // Read receipt for my messages
-                        if let last = chat.lastMessage, last.isFromMe {
+                        if let last = chat.lastMessage, last.isFromMe(myId: appState.currentUser?.id) {
                             Image(systemName: last.isRead ? "checkmark.circle.fill" : "checkmark.circle")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(PeakColors.textTertiary)
