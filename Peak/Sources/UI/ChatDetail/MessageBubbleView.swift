@@ -102,10 +102,9 @@ struct MessageBubbleView: View {
 #Preview {
     ZStack {
         PeakColors.black.ignoresSafeArea()
-        VStack(spacing: 0) {
-            MessageBubbleView(message: .make("Hey! How do you like Peak so far?", from: User.alex.id, chatId: "c1", offset: -120))
-            MessageBubbleView(message: .make("It's incredible. Clean, fast, beautiful.", from: User.me.id, chatId: "c1", offset: -60))
-            MessageBubbleView(message: .make("Right? Nothing like it.", from: User.alex.id, chatId: "c1", offset: -30))
+        VStack {
+            MessageBubbleView(message: .make("Hey! How do you like Peak so far?", from: User.alex.id, chatId: UUID(), offset: -120))
+            MessageBubbleView(message: .make("It's incredibly fast and smooth. The animations are next level! \n\nAlso the design system is exactly what I wanted.", from: User.me.id, chatId: UUID(), offset: -60))
         }
         .padding(.vertical)
     }

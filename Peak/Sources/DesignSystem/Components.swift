@@ -10,7 +10,8 @@ struct AvatarView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Circle()
-                .fill(PeakColors.avatarTint(for: user.id))
+                .fill(PeakColors.avatarTint(for: user.id.uuidString))
+                .shadow(color: PeakColors.avatarTint(for: user.id.uuidString).opacity(0.15), radius: size * 0.15, y: size * 0.05)
                 .frame(width: size, height: size)
                 .overlay(
                     Text(user.initials)

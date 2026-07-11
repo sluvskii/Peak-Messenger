@@ -165,7 +165,7 @@ struct ChatDetailView: View {
         guard !trimmed.isEmpty else { return }
         messageText = ""
         
-        guard let senderId = appState.currentUser?.id ?? User.me.id else { return }
+        let senderId = appState.currentUser?.id ?? User.me.id
         
         let msg = Message(
             id: UUID(),

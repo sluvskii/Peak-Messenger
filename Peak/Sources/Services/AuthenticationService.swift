@@ -11,14 +11,11 @@ final class AuthenticationService {
 
     /// Returns the current authenticated user's ID
     var currentUserId: UUID? {
-        // In v2, session is async, but we might have it cached if using an observable state
-        // For synchronous access we need to await it, or just use AppState.
-        // Let's implement an async version:
         get async {
-            try? await client.auth.session().user.id
+            try? await client.auth.session.user.id
         }
     }
-    var authStateChanges: AsyncStream<(AuthChangeEvent, Session?)> {
+    var authStateChanges: AsyncStream<(event: AuthChangeEvent, session: Session?)> {
         client.auth.authStateChanges
     }
 
@@ -28,7 +25,7 @@ final class AuthenticationService {
     }
     
     func signUp(email: String, password: String, username: String) async throws {
-        let response = try await client.auth.signUp(
+        _ = try await client.auth.signUp(
             email: email, 
             password: password,
             data: ["username": .string(username)]

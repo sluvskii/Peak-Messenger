@@ -51,7 +51,7 @@ final class DatabaseService {
                 .from("chat_participants")
                 .select("chat_id")
                 .eq("user_id", value: otherUserId)
-                .in("chat_id", value: myChatIds)
+                .in("chat_id", values: myChatIds)
                 .execute()
                 .value
                 
@@ -106,18 +106,32 @@ final class DatabaseService {
     func listenForMessages(in chatId: UUID) async throws -> AsyncStream<Message> {
         let channel = client.channel("messages:chat_id=eq.\(chatId)")
         let stream = channel.postgresChange(
-            InsertAction.self,
+            AnyAction.self,
             schema: "public",
             table: "messages",
             filter: "chat_id=eq.\(chatId)"
         )
-        await channel.subscribe()
+        Task { try? await channel.subscribeWithError() }
         
         return AsyncStream { continuation in
             Task {
                 for await action in stream {
                     do {
-                        let msg = try action.decode(as: Message.self)
+                        let data = try JSONEncoder().encode(action.record)
+                        
+                        let decoder = JSONDecoder()
+                        let formatter = ISO8601DateFormatter()
+                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        decoder.dateDecodingStrategy = .custom({ decoder in
+                            let container = try decoder.singleValueContainer()
+                            let string = try container.decode(String.self)
+                            if let date = formatter.date(from: string) { return date }
+                            formatter.formatOptions = [.withInternetDateTime]
+                            if let date = formatter.date(from: string) { return date }
+                            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(string)")
+                        })
+                        
+                        let msg = try decoder.decode(Message.self, from: data)
                         continuation.yield(msg)
                     } catch {
                         print("Failed to decode message: \(error)")

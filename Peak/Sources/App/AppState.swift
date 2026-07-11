@@ -56,7 +56,6 @@ final class AppState {
             fileName: nil,
             fileSize: nil,
             duration: nil,
-            reactions: [],
             timestamp: Date(),
             isRead: false,
             isEdited: false,

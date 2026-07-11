@@ -5,7 +5,7 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AppState.self) private var appState
 
-    var user: User { appState.currentUser }
+    var user: User { appState.currentUser ?? .me }
 
     var body: some View {
         NavigationStack {

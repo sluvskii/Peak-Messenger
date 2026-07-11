@@ -27,7 +27,7 @@ struct MainTabView: View {
                 Label {
                     Text("Профиль")
                 } icon: {
-                    AvatarView(user: appState.currentUser, size: 24, showOnline: false)
+                    AvatarView(user: appState.currentUser ?? .me, size: 24, showOnline: false)
                 }
             }
         }
