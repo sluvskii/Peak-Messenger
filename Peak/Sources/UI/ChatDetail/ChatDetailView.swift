@@ -265,7 +265,7 @@ struct ChatDetailView: View {
                 text: "",
                 mediaUrl: url.absoluteString,
                 fileName: nil,
-                fileSize: Int64(data.count),
+                fileSize: Int(data.count),
                 duration: nil,
                 timestamp: Date(),
                 isRead: false,

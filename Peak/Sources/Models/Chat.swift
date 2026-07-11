@@ -4,7 +4,7 @@ import Foundation
 
 struct Chat: Identifiable, Hashable, Codable {
     let id: UUID
-    let participants: [User]
+    var participants: [User]
     var messages: [Message]
     var isPinned: Bool
     var isMuted: Bool

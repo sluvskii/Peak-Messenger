@@ -26,7 +26,7 @@ struct Message: Identifiable, Hashable, Codable {
     let id: UUID
     let chatId: UUID
     let senderId: UUID
-    let type: MessageType
+    var type: MessageType
     var text: String?
     var mediaUrl: String?
     var fileName: String?

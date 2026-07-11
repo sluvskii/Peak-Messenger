@@ -260,7 +260,7 @@ final class DatabaseService {
     func updateMessage(_ message: Message) async throws {
         struct UpdateContent: Encodable {
             let text: String?
-            let type: Message.MessageType
+            let type: MessageType
             let is_edited: Bool
         }
         
@@ -321,7 +321,14 @@ final class DatabaseService {
             Task {
                 for await action in stream {
                     do {
-                        let data = try JSONEncoder().encode(action.record)
+                        let record: AnyJSON
+                        switch action {
+                        case .insert(let insertAction): record = insertAction.record
+                        case .update(let updateAction): record = updateAction.record
+                        case .delete: continue
+                        }
+                        
+                        let data = try JSONEncoder().encode(record)
                         let decoder = JSONDecoder()
                         let msg = try decoder.decode(Message.self, from: data)
                         continuation.yield(msg)
