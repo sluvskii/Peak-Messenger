@@ -167,13 +167,14 @@ struct ChatDetailView: View {
     // MARK: — Input Bar
 
     private var inputBar: some View {
-        VStack(spacing: 0) {
+        let uploading = isUploadingMedia
+        return VStack(spacing: 0) {
             PeakDivider()
 
             HStack(alignment: .bottom, spacing: 10) {
                 // Attachment
                 PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    if isUploadingMedia {
+                    if uploading {
                         ProgressView()
                             .frame(width: 36, height: 36)
                     } else {
@@ -183,7 +184,7 @@ struct ChatDetailView: View {
                             .frame(width: 36, height: 36)
                     }
                 }
-                .disabled(isUploadingMedia)
+                .disabled(uploading)
 
                 // Text field
                 TextField("Сообщение", text: $messageText, axis: .vertical)

@@ -3,7 +3,7 @@ import Foundation
 // MARK: — CacheService
 
 /// A simple file-based JSON cache for offline-first support.
-final class CacheService {
+final class CacheService: @unchecked Sendable {
     static let shared = CacheService()
     
     private let encoder = JSONEncoder()
