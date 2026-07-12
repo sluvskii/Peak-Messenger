@@ -97,6 +97,9 @@ struct ChatDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             appState.markAllRead(in: chat.id)
+            Task {
+                await appState.loadMessages(for: chat.id)
+            }
         }
         .onChange(of: selectedItem) { _, newItem in
             Task {
@@ -145,6 +148,13 @@ struct ChatDetailView: View {
                                         deleteMessage(message)
                                     } label: {
                                         Label("Удалить", systemImage: "trash")
+                                    }
+                                }
+                            }
+                            .onAppear {
+                                if message.id == messages.first?.id && messages.count >= 50 {
+                                    Task {
+                                        await appState.loadMessages(for: chat.id, offset: messages.count)
                                     }
                                 }
                             }
@@ -295,10 +305,18 @@ struct ChatDetailView: View {
         guard let item = item, let data = try? await item.loadTransferable(type: Data.self) else { return }
         guard let userId = appState.currentUser?.id else { return }
         
+        // Compress image if possible
+        let uploadData: Data
+        if let image = UIImage(data: data), let compressed = image.jpegData(compressionQuality: 0.6) {
+            uploadData = compressed
+        } else {
+            uploadData = data
+        }
+        
         isUploadingMedia = true
         do {
             let path = "\(chat.id)/\(UUID().uuidString).jpg"
-            let url = try await StorageService.shared.uploadMedia(data, bucket: "messages", path: path, contentType: "image/jpeg")
+            let url = try await StorageService.shared.uploadMedia(uploadData, bucket: "messages", path: path, contentType: "image/jpeg")
             
             // Create and send image message
             let msg = Message(

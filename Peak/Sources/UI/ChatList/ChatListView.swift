@@ -24,7 +24,9 @@ struct ChatListView: View {
             ZStack {
                 PeakColors.black.ignoresSafeArea()
 
-                if appState.chats.isEmpty {
+                if appState.isLoadingChats && appState.chats.isEmpty {
+                    skeletonList
+                } else if appState.chats.isEmpty {
                     emptyState
                 } else {
                     chatList
@@ -69,6 +71,23 @@ struct ChatListView: View {
                 .font(PeakTypography.headline)
                 .foregroundStyle(PeakColors.textSecondary)
         }
+    }
+
+    private var skeletonList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(0..<6, id: \.self) { _ in
+                    ChatRowView(chat: Chat.mockChats[0])
+                        .redacted(reason: .placeholder)
+                        .opacity(0.4)
+                        .disabled(true)
+
+                    PeakDivider()
+                        .padding(.leading, 86)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
     }
 
     @ToolbarContentBuilder

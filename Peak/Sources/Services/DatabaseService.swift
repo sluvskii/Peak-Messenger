@@ -138,15 +138,29 @@ final class DatabaseService {
             chats.append(Chat(id: chatId, participants: chatUsers, messages: [], isPinned: isPinned, isMuted: isMuted, draftText: nil))
         }
         
-        let allMessages: [Message] = try await client
-            .from("messages")
-            .select()
-            .in("chat_id", values: myChatIds)
-            .order("created_at", ascending: true)
-            .execute()
-            .value
-            
-        let messagesByChat = Dictionary(grouping: allMessages, by: { $0.chatId })
+        // Fetch only the LAST message for each chat
+        let messagesByChat = try await withThrowingTaskGroup(of: (UUID, [Message]).self) { group in
+            for chatId in myChatIds {
+                group.addTask {
+                    let client = await DatabaseService.shared.client
+                    let lastMsgs: [Message] = try await client
+                        .from("messages")
+                        .select()
+                        .eq("chat_id", value: chatId)
+                        .order("created_at", ascending: false)
+                        .limit(1)
+                        .execute()
+                        .value
+                    return (chatId, lastMsgs)
+                }
+            }
+            var dict: [UUID: [Message]] = [:]
+            for try await (chatId, msgs) in group {
+                dict[chatId] = msgs
+            }
+            return dict
+        }
+        
         for i in 0..<chats.count {
             chats[i].messages = messagesByChat[chats[i].id] ?? []
         }
@@ -260,14 +274,17 @@ final class DatabaseService {
             .execute()
     }
     
-    func fetchMessages(for chatId: UUID) async throws -> [Message] {
-        try await client
+    func fetchMessages(for chatId: UUID, limit: Int = 50, offset: Int = 0) async throws -> [Message] {
+        let msgs: [Message] = try await client
             .from("messages")
             .select()
             .eq("chat_id", value: chatId)
-            .order("created_at", ascending: true)
+            .order("created_at", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
+        // Reverse so the oldest is first, which matches our UI layout
+        return Array(msgs.reversed())
     }
 
     func sendMessage(_ message: Message) async throws {
@@ -304,12 +321,15 @@ final class DatabaseService {
 
     func listenForMessages(in chatId: UUID) async throws -> AsyncStream<Message> {
         let channel = client.channel("messages:chat_id=eq.\(chatId)")
+        // Supabase-swift new filter syntax
         let stream = channel.postgresChange(
             InsertAction.self,
             schema: "public",
-            table: "messages",
-            filter: "chat_id=eq.\(chatId)"
+            table: "messages"
         )
+        // Wait, does removing `filter:` break filtering? 
+        // If we want to be safe, we will just filter client-side for MVP if syntax fails,
+        // or let's try the new syntax if possible. Actually, we will filter in Swift.
         Task { try? await channel.subscribeWithError() }
         
         return AsyncStream { continuation in
@@ -320,7 +340,9 @@ final class DatabaseService {
                         
                         let decoder = JSONDecoder()
                         let msg = try decoder.decode(Message.self, from: data)
-                        continuation.yield(msg)
+                        if msg.chatId == chatId {
+                            continuation.yield(msg)
+                        }
                     } catch {
                         print("Failed to decode message: \(error)")
                     }

@@ -16,6 +16,7 @@ final class AppState {
     var chats: [Chat] = CacheService.shared.loadChats() ?? []
     var currentUser: User? = CacheService.shared.loadUser()
     var contacts: [User] = CacheService.shared.loadContacts() ?? []
+    var isLoadingChats = false
 
     func checkSession() async {
         for await (_, session) in AuthenticationService.shared.authStateChanges {
@@ -49,6 +50,7 @@ final class AppState {
     }
 
     func loadInitialData() async {
+        isLoadingChats = true
         do {
             let allUsers = try await DatabaseService.shared.fetchAllUsers()
             // Exclude current user from contacts
@@ -62,26 +64,37 @@ final class AppState {
             self.chats = try await DatabaseService.shared.fetchMyChats()
             saveChatsToCache()
             
-            // Start global listeners
-            startGlobalMessageListener()
+            // Start specific chat listeners
+            startMessageListeners()
             startGlobalUserListener()
             
         } catch {
             print("Failed to load initial data: \(error)")
         }
+        isLoadingChats = false
     }
 
-    private func startGlobalMessageListener() {
-        Task {
+    private var messageListenTasks: [UUID: Task<Void, Never>] = [:]
+
+    private func startMessageListeners() {
+        for chat in chats {
+            listenToChat(chat.id)
+        }
+    }
+    
+    private func listenToChat(_ chatId: UUID) {
+        guard messageListenTasks[chatId] == nil else { return }
+        let task = Task {
             do {
-                let stream = try await DatabaseService.shared.listenForAllMessages()
+                let stream = try await DatabaseService.shared.listenForMessages(in: chatId)
                 for await message in stream {
                     handleIncomingMessage(message)
                 }
             } catch {
-                print("Global listen error: \(error)")
+                print("Listen error for chat \(chatId): \(error)")
             }
         }
+        messageListenTasks[chatId] = task
     }
     
     private func startGlobalUserListener() {
@@ -129,6 +142,7 @@ final class AppState {
                     if let newChat = allChats.first(where: { $0.id == message.chatId }) {
                         self.chats.append(newChat)
                         saveChatsToCache()
+                        listenToChat(newChat.id)
                     }
                 } catch {
                     print("Failed to fetch new chat: \(error)")
@@ -228,6 +242,27 @@ final class AppState {
         }
     }
 
+    func loadMessages(for chatId: UUID, offset: Int = 0) async {
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        do {
+            let newMessages = try await DatabaseService.shared.fetchMessages(for: chatId, limit: 50, offset: offset)
+            
+            var current = chats[idx].messages
+            let existingIds = Set(current.map { $0.id })
+            
+            for msg in newMessages {
+                if !existingIds.contains(msg.id) {
+                    current.append(msg)
+                }
+            }
+            
+            chats[idx].messages = current.sorted { $0.timestamp < $1.timestamp }
+            saveChatsToCache()
+        } catch {
+            print("Failed to load messages: \(error)")
+        }
+    }
+
     func togglePin(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].isPinned.toggle()
@@ -253,9 +288,14 @@ final class AppState {
         }
     }
 
+    private var saveChatsTask: Task<Void, Never>?
+
     private func saveChatsToCache() {
+        saveChatsTask?.cancel()
         let currentChats = self.chats
-        Task.detached {
+        saveChatsTask = Task.detached {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s debounce
+            guard !Task.isCancelled else { return }
             CacheService.shared.saveChats(currentChats)
         }
     }
