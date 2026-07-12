@@ -20,7 +20,7 @@ final class DatabaseService {
     }
     
     func updateAvatarUrl(_ url: String) async throws {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return }
         struct UpdateAvatar: Encodable { let avatar_url: String }
         try await client
             .from("users")
@@ -30,7 +30,7 @@ final class DatabaseService {
     }
     
     func updateUsername(_ name: String) async throws {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return }
         struct UpdateName: Encodable { let username: String }
         try await client
             .from("users")
@@ -40,7 +40,7 @@ final class DatabaseService {
     }
 
     func updateBio(_ bio: String) async throws {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return }
         struct UpdateBio: Encodable { let bio: String }
         try await client
             .from("users")
@@ -50,7 +50,7 @@ final class DatabaseService {
     }
     
     func updatePresence(isOnline: Bool) async throws {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return }
         struct UpdatePresenceModel: Encodable { 
             let is_online: Bool
             let last_seen: String // ISO8601 string
@@ -90,7 +90,7 @@ final class DatabaseService {
     // MARK: — Chats
 
     func fetchMyChats() async throws -> [Chat] {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return [] }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return [] }
         
         struct ParticipantResult: Decodable { let chat_id: UUID }
         let myChatsResponse: [ParticipantResult] = try await client
@@ -155,7 +155,7 @@ final class DatabaseService {
     }
 
     func getOrCreateChat(with otherUserId: UUID) async throws -> Chat {
-        guard let myId = try await AuthenticationService.shared.currentUserId else {
+        guard let myId = await AuthenticationService.shared.currentUserId else {
             throw URLError(.userAuthenticationRequired)
         }
         
@@ -251,7 +251,7 @@ final class DatabaseService {
     // MARK: — Messages
     
     func deleteChatParticipant(chatId: UUID) async throws {
-        guard let myId = try await AuthenticationService.shared.currentUserId else { return }
+        guard let myId = await AuthenticationService.shared.currentUserId else { return }
         try await client
             .from("chat_participants")
             .delete()

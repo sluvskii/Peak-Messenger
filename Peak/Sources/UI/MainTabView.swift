@@ -65,7 +65,6 @@ extension UIImage {
         let rect = CGRect(x: 0, y: 0, width: size, height: size)
         
         let format = UIGraphicsImageRendererFormat()
-        format.scale = UIScreen.main.scale
         let renderer = UIGraphicsImageRenderer(size: rect.size, format: format)
         
         return renderer.image { ctx in

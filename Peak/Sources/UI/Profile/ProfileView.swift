@@ -58,12 +58,14 @@ struct ProfileView: View {
     // MARK: — Header
 
     private var headerSection: some View {
-        VStack(spacing: 14) {
+        let currentUser = user
+        let uploading = isUploadingAvatar
+        return VStack(spacing: 14) {
             PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
                 ZStack(alignment: .bottomTrailing) {
-                    AvatarView(user: user, size: 86, showOnline: false)
+                    AvatarView(user: currentUser, size: 86, showOnline: false)
                         .overlay {
-                            if isUploadingAvatar {
+                            if uploading {
                                 ProgressView()
                                     .padding()
                                     .background(.ultraThinMaterial)
@@ -78,7 +80,7 @@ struct ProfileView: View {
                 }
             }
             .padding(.top, 20)
-            .disabled(isUploadingAvatar)
+            .disabled(uploading)
 
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
