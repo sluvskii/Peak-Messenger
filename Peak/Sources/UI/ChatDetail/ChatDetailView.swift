@@ -357,24 +357,23 @@ struct ChatDetailView: View {
                                 // White pulsing waves (outer)
                                 Circle()
                                     .fill(Color.white.opacity(0.08))
-                                    .frame(width: 76, height: 76)
+                                    .frame(width: 90, height: 90)
                                     .scaleEffect(1.0 + currentLevel * 1.5)
                                     .animation(.easeOut(duration: 0.15), value: currentLevel)
                                 
                                 // White pulsing waves (inner)
                                 Circle()
                                     .fill(Color.white.opacity(0.18))
-                                    .frame(width: 56, height: 56)
+                                    .frame(width: 70, height: 70)
                                     .scaleEffect(1.0 + currentLevel * 1.1)
                                     .animation(.easeOut(duration: 0.15), value: currentLevel)
                                 
-                                // White circle with black mic icon
+                                // Massive white circle with black mic icon
                                 Image(systemName: "mic.fill")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 24))
                                     .foregroundStyle(PeakColors.black)
-                                    .frame(width: 44, height: 44)
+                                    .frame(width: 56, height: 56)
                                     .background(Color.white, in: Circle())
-                                    .scaleEffect(1.25)
                             } else {
                                 // Standard mic button appearance
                                 Image(systemName: "mic")
@@ -417,7 +416,7 @@ struct ChatDetailView: View {
                                 
                                 // 2. Vertical swipe-to-lock check
                                 if value.translation.height < -65 {
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) { // Bouncy spring back
                                         recordingState = .locked
                                         dragOffset = .zero
                                     }
@@ -425,7 +424,11 @@ struct ChatDetailView: View {
                                 }
                             }
                     )
-                    .offset(y: recordingState == .holding ? min(0, dragOffset.height) : 0)
+                    // Button physically follows finger in 2D space!
+                    .offset(
+                        x: recordingState == .holding ? min(0, dragOffset.width) : 0,
+                        y: recordingState == .holding ? min(0, dragOffset.height) : 0
+                    )
                     .overlay(alignment: .top) {
                         if recordingState == .holding {
                             let distance = abs(dragOffset.height)
