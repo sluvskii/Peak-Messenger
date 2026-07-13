@@ -66,9 +66,10 @@ struct ChatDetailView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            
-                            Divider()
+                            .padding(.vertical, 10)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 8)
                         }
 
                         // Replying banner
@@ -92,16 +93,15 @@ struct ChatDetailView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            
-                            Divider()
+                            .padding(.vertical, 10)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 8)
                         }
 
                         inputBar
                     }
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 8)
+                    .background(Color.clear)
                 }
         }
         .navigationTitle("")
@@ -210,15 +210,16 @@ struct ChatDetailView: View {
         let uploading = isUploadingMedia
         let recording = voiceManager.isRecording
         
-        return HStack(alignment: .bottom, spacing: 8) {
+        return HStack(alignment: .bottom, spacing: 10) {
             if recording {
                 recordingHUD
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 
                 // Mic button (held down during recording)
                 Image(systemName: "mic.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(.red)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .glassEffect(in: Circle())
                     .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
                     .animation(.spring(duration: 0.2), value: hasStartedRecording)
@@ -236,7 +237,7 @@ struct ChatDetailView: View {
                                 .foregroundStyle(PeakColors.textPrimary)
                         }
                     }
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                 }
                 .glassEffect(in: Circle())
                 .disabled(uploading)
@@ -251,8 +252,8 @@ struct ChatDetailView: View {
                         .focused($isInputFocused)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.vertical, 11)
+                .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                 // Send / voice button
                 Group {
@@ -260,7 +261,7 @@ struct ChatDetailView: View {
                         Image(systemName: "mic")
                             .font(.system(size: 19))
                             .foregroundStyle(PeakColors.textPrimary)
-                            .frame(width: 40, height: 40)
+                            .frame(width: 44, height: 44)
                             .glassEffect(in: Circle())
                             .contentShape(Rectangle())
                             .gesture(recordGesture)
@@ -271,7 +272,7 @@ struct ChatDetailView: View {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(PeakColors.black)
-                                .frame(width: 40, height: 40)
+                                .frame(width: 44, height: 44)
                                 .background(PeakColors.textPrimary, in: Circle())
                         }
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -279,8 +280,9 @@ struct ChatDetailView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+        .background(Color.clear)
         .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
         .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
     }
@@ -316,8 +318,8 @@ struct ChatDetailView: View {
                 .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
                 .offset(x: dragOffset)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private var recordGesture: some Gesture {
