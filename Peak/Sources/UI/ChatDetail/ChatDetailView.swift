@@ -231,6 +231,7 @@ struct ChatDetailView: View {
                 .glassEffect(.regular.interactive(), in: Circle())
                 .disabled(uploading)
                 .buttonStyle(PressButtonStyle())
+                .transition(.move(edge: .leading).combined(with: .opacity))
 
                 // Text field
                 HStack(alignment: .bottom, spacing: 10) {
@@ -243,6 +244,7 @@ struct ChatDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .transition(.move(edge: .leading).combined(with: .opacity))
                 
             } else if recordingState == .holding {
                 // Left side: Centiseconds timer and swipe to cancel label
@@ -271,11 +273,15 @@ struct ChatDetailView: View {
                             .foregroundStyle(PeakColors.textSecondary)
                     }
                     .opacity(max(0.1, 1.0 - Double(abs(dragOffset.width)) / 100.0))
-                    .offset(x: dragOffset.width * 0.4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .offset(x: min(0, dragOffset.width * 0.8))
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
                 
             } else if recordingState == .locked {
                 // Delete button
@@ -288,6 +294,7 @@ struct ChatDetailView: View {
                         .frame(width: 44, height: 44)
                 }
                 .glassEffect(.regular.interactive(), in: Circle())
+                .transition(.scale.combined(with: .opacity))
 
                 // Lock recording view
                 HStack(spacing: 12) {
@@ -310,6 +317,7 @@ struct ChatDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
             
             // Persistent Button on the right
@@ -339,9 +347,8 @@ struct ChatDetailView: View {
                     }
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else {
-                    // Persistent Voice Recording Button (keeps touch active!)
+                    // Persistent Voice Recording Button
                     Button {
-                        // handled by gestures/button style
                     } label: {
                         ZStack {
                             if recordingState == .holding {
@@ -352,14 +359,14 @@ struct ChatDetailView: View {
                                     .fill(Color.white.opacity(0.08))
                                     .frame(width: 76, height: 76)
                                     .scaleEffect(1.0 + currentLevel * 1.5)
-                                    .animation(.easeOut(duration: 0.1), value: currentLevel)
+                                    .animation(.easeOut(duration: 0.15), value: currentLevel)
                                 
                                 // White pulsing waves (inner)
                                 Circle()
                                     .fill(Color.white.opacity(0.18))
                                     .frame(width: 56, height: 56)
                                     .scaleEffect(1.0 + currentLevel * 1.1)
-                                    .animation(.easeOut(duration: 0.1), value: currentLevel)
+                                    .animation(.easeOut(duration: 0.15), value: currentLevel)
                                 
                                 // White circle with black mic icon
                                 Image(systemName: "mic.fill")
@@ -367,7 +374,7 @@ struct ChatDetailView: View {
                                     .foregroundStyle(PeakColors.black)
                                     .frame(width: 44, height: 44)
                                     .background(Color.white, in: Circle())
-                                    .scaleEffect(1.2)
+                                    .scaleEffect(1.25)
                             } else {
                                 // Standard mic button appearance
                                 Image(systemName: "mic")
@@ -381,7 +388,7 @@ struct ChatDetailView: View {
                     }
                     .buttonStyle(RecordButtonStyle(onPressChanged: { isPressed in
                         if isPressed {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
                                 recordingState = .holding
                                 dragOffset = .zero
                             }
@@ -399,7 +406,7 @@ struct ChatDetailView: View {
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 guard recordingState == .holding else { return }
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     dragOffset = value.translation
                                 }
                                 
@@ -409,8 +416,8 @@ struct ChatDetailView: View {
                                 }
                                 
                                 // 2. Vertical swipe-to-lock check
-                                if value.translation.height < -70 {
-                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                if value.translation.height < -65 {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) {
                                         recordingState = .locked
                                         dragOffset = .zero
                                     }
@@ -418,12 +425,17 @@ struct ChatDetailView: View {
                                 }
                             }
                     )
+                    .offset(y: recordingState == .holding ? min(0, dragOffset.height) : 0)
                     .overlay(alignment: .top) {
                         if recordingState == .holding {
+                            let distance = abs(dragOffset.height)
+                            let isClose = dragOffset.height < -40
+                            
                             VStack(spacing: 6) {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 14))
-                                    .foregroundStyle(dragOffset.height < -40 ? PeakColors.textPrimary : PeakColors.textSecondary)
+                                    .foregroundStyle(isClose ? PeakColors.textPrimary : PeakColors.textSecondary)
+                                    .scaleEffect(isClose ? 1.25 : 1.0)
                                 
                                 Image(systemName: "chevron.up")
                                     .font(.system(size: 10, weight: .bold))
@@ -433,7 +445,9 @@ struct ChatDetailView: View {
                             }
                             .frame(width: 36, height: 60)
                             .glassEffect(.regular.interactive(), in: Capsule())
-                            .offset(y: -75 + max(0, dragOffset.height * 0.2))
+                            .offset(y: -75)
+                            .opacity(max(0.0, 1.0 - Double(abs(dragOffset.width)) / 50.0))
+                            .scaleEffect(max(0.7, 1.0 - (distance / 200.0)))
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }
