@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import QuartzCore
 
 // MARK: — Chat Detail Screen
 
