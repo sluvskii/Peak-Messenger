@@ -271,6 +271,8 @@ struct ChatDetailView: View {
                         Text("Влево — отмена")
                             .font(PeakTypography.body)
                             .foregroundStyle(PeakColors.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .opacity(max(0.1, 1.0 - Double(abs(dragOffset.width)) / 100.0))
                 }
@@ -405,9 +407,8 @@ struct ChatDetailView: View {
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 guard recordingState == .holding else { return }
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    dragOffset = value.translation
-                                }
+                                // Instant update without withAnimation for 0-lag 120Hz tracking
+                                dragOffset = value.translation
                                 
                                 // 1. Horizontal swipe-to-cancel check
                                 if value.translation.width < -100 {
@@ -424,10 +425,14 @@ struct ChatDetailView: View {
                                 }
                             }
                     )
-                    // Button physically follows finger in 2D space!
+                    // Perfectly center the 56pt massive button relative to the 44pt text field!
+                    .alignmentGuide(.bottom) { d in
+                        recordingState == .holding ? d[.bottom] - 6 : d[.bottom]
+                    }
+                    // Button physically follows finger in 2D space, but locked to primary axis!
                     .offset(
-                        x: recordingState == .holding ? min(0, dragOffset.width) : 0,
-                        y: recordingState == .holding ? min(0, dragOffset.height) : 0
+                        x: recordingState == .holding && abs(dragOffset.width) > abs(dragOffset.height) ? min(0, dragOffset.width) : 0,
+                        y: recordingState == .holding && abs(dragOffset.height) > abs(dragOffset.width) ? min(0, dragOffset.height) : 0
                     )
                     .overlay(alignment: .top) {
                         if recordingState == .holding {
