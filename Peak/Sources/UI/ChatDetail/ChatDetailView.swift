@@ -209,14 +209,11 @@ struct ChatDetailView: View {
 
     // MARK: — Input Bar
 
-    // MARK: — Input Bar
-
     private var inputBar: some View {
         let uploading = isUploadingMedia
         
         return HStack(alignment: .bottom, spacing: 10) {
-            switch recordingState {
-            case .none:
+            if recordingState == .none {
                 // Attachment Button
                 PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
                     ZStack {
@@ -246,38 +243,14 @@ struct ChatDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                // Send / voice button
-                Group {
-                    if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Image(systemName: "mic")
-                            .font(.system(size: 19))
-                            .foregroundStyle(PeakColors.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .glassEffect(.regular.interactive(), in: Circle())
-                            .contentShape(Rectangle())
-                            .highPriorityGesture(recordGesture)
-                    } else {
-                        Button {
-                            send()
-                        } label: {
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(PeakColors.black)
-                                .frame(width: 44, height: 44)
-                                .background(PeakColors.textPrimary, in: Circle())
-                        }
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
-                    }
-                }
-
-            case .holding:
+                
+            } else if recordingState == .holding {
                 // Left side: Centiseconds timer and swipe to cancel label
                 HStack(spacing: 12) {
                     HStack(spacing: 6) {
                         Image(systemName: "circle.fill")
                             .font(.system(size: 8))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(PeakColors.textPrimary)
                             .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
                         
                         Text(formatTelegramDuration(voiceManager.recordingDuration))
@@ -304,60 +277,14 @@ struct ChatDetailView: View {
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 
-                // Right side: Active Mic Button with dynamic pulsing audio waves
-                ZStack {
-                    let currentLevel = CGFloat(voiceManager.audioLevels.last ?? 0.1)
-                    
-                    // Pulsing Wave 1 (outer)
-                    Circle()
-                        .fill(Color.red.opacity(0.12))
-                        .frame(width: 76, height: 76)
-                        .scaleEffect(1.0 + currentLevel * 1.5)
-                        .animation(.easeOut(duration: 0.1), value: currentLevel)
-                    
-                    // Pulsing Wave 2 (inner)
-                    Circle()
-                        .fill(Color.red.opacity(0.22))
-                        .frame(width: 56, height: 56)
-                        .scaleEffect(1.0 + currentLevel * 1.1)
-                        .animation(.easeOut(duration: 0.1), value: currentLevel)
-                    
-                    // Solid white button with red mic icon
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.red)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white, in: Circle())
-                }
-                .frame(width: 44, height: 44)
-                .scaleEffect(1.2)
-                .overlay(alignment: .top) {
-                    VStack(spacing: 6) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(dragOffset.height < -40 ? .red : PeakColors.textPrimary)
-                        
-                        Image(systemName: "chevron.up")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(PeakColors.textSecondary)
-                            .offset(y: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
-                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
-                    }
-                    .frame(width: 36, height: 60)
-                    .glassEffect(.regular.interactive(), in: Capsule())
-                    .offset(y: -75 + max(0, dragOffset.height * 0.2))
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                .highPriorityGesture(recordGesture)
-
-            case .locked:
+            } else if recordingState == .locked {
                 // Delete button
                 Button {
                     cancelAndDiscardRecording()
                 } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 18))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(PeakColors.textPrimary)
                         .frame(width: 44, height: 44)
                 }
                 .glassEffect(.regular.interactive(), in: Circle())
@@ -366,7 +293,7 @@ struct ChatDetailView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 8))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(PeakColors.textPrimary)
                         .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
                     
                     Text(formatTelegramDuration(voiceManager.recordingDuration))
@@ -383,58 +310,139 @@ struct ChatDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                // Send button
-                Button {
-                    stopAndSendVoiceMessage()
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(PeakColors.black)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white, in: Circle())
+            }
+            
+            // Persistent Button on the right
+            Group {
+                if !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && recordingState == .none {
+                    // standard send button
+                    Button {
+                        send()
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(PeakColors.black)
+                            .frame(width: 44, height: 44)
+                            .background(PeakColors.textPrimary, in: Circle())
+                    }
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                } else if recordingState == .locked {
+                    // locked mode send button
+                    Button {
+                        stopAndSendVoiceMessage()
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(PeakColors.black)
+                            .frame(width: 44, height: 44)
+                            .background(Color.white, in: Circle())
+                    }
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                } else {
+                    // Persistent Voice Recording Button (keeps touch active!)
+                    Button {
+                        // handled by gestures/button style
+                    } label: {
+                        ZStack {
+                            if recordingState == .holding {
+                                let currentLevel = CGFloat(voiceManager.audioLevels.last ?? 0.1)
+                                
+                                // White pulsing waves (outer)
+                                Circle()
+                                    .fill(Color.white.opacity(0.08))
+                                    .frame(width: 76, height: 76)
+                                    .scaleEffect(1.0 + currentLevel * 1.5)
+                                    .animation(.easeOut(duration: 0.1), value: currentLevel)
+                                
+                                // White pulsing waves (inner)
+                                Circle()
+                                    .fill(Color.white.opacity(0.18))
+                                    .frame(width: 56, height: 56)
+                                    .scaleEffect(1.0 + currentLevel * 1.1)
+                                    .animation(.easeOut(duration: 0.1), value: currentLevel)
+                                
+                                // White circle with black mic icon
+                                Image(systemName: "mic.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(PeakColors.black)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color.white, in: Circle())
+                                    .scaleEffect(1.2)
+                            } else {
+                                // Standard mic button appearance
+                                Image(systemName: "mic")
+                                    .font(.system(size: 19))
+                                    .foregroundStyle(PeakColors.textPrimary)
+                                    .frame(width: 44, height: 44)
+                                    .glassEffect(.regular.interactive(), in: Circle())
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RecordButtonStyle(onPressChanged: { isPressed in
+                        if isPressed {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                recordingState = .holding
+                                dragOffset = .zero
+                            }
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            Task {
+                                await voiceManager.startRecording()
+                            }
+                        } else {
+                            if recordingState == .holding {
+                                stopAndSendVoiceMessage()
+                            }
+                        }
+                    }))
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                guard recordingState == .holding else { return }
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                                    dragOffset = value.translation
+                                }
+                                
+                                // 1. Horizontal swipe-to-cancel check
+                                if value.translation.width < -100 {
+                                    cancelAndDiscardRecording()
+                                }
+                                
+                                // 2. Vertical swipe-to-lock check
+                                if value.translation.height < -70 {
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                        recordingState = .locked
+                                        dragOffset = .zero
+                                    }
+                                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                }
+                            }
+                    )
+                    .overlay(alignment: .top) {
+                        if recordingState == .holding {
+                            VStack(spacing: 6) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(dragOffset.height < -40 ? PeakColors.textPrimary : PeakColors.textSecondary)
+                                
+                                Image(systemName: "chevron.up")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(PeakColors.textSecondary)
+                                    .offset(y: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
+                                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
+                            }
+                            .frame(width: 36, height: 60)
+                            .glassEffect(.regular.interactive(), in: Capsule())
+                            .offset(y: -75 + max(0, dragOffset.height * 0.2))
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    }
                 }
-                .transition(.scale(scale: 0.6).combined(with: .opacity))
             }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
         .background(Color.clear)
-        .animation(.spring(duration: 0.25, bounce: 0.3), value: recordingState)
-    }
-
-    private var recordGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if recordingState == .none {
-                    recordingState = .holding
-                    dragOffset = .zero
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    Task {
-                        await voiceManager.startRecording()
-                    }
-                }
-                
-                guard recordingState == .holding else { return }
-                dragOffset = value.translation
-                
-                // 1. Horizontal swipe-to-cancel check (dragged left)
-                if value.translation.width < -100 {
-                    cancelAndDiscardRecording()
-                }
-                
-                // 2. Vertical swipe-to-lock check (dragged up)
-                if value.translation.height < -70 {
-                    recordingState = .locked
-                    dragOffset = .zero
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                }
-            }
-            .onEnded { _ in
-                if recordingState == .holding {
-                    stopAndSendVoiceMessage()
-                }
-            }
     }
 
     private func formatTelegramDuration(_ duration: TimeInterval) -> String {
@@ -446,15 +454,19 @@ struct ChatDetailView: View {
 
     private func cancelAndDiscardRecording() {
         voiceManager.cancelRecording()
-        recordingState = .none
-        dragOffset = .zero
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            recordingState = .none
+            dragOffset = .zero
+        }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func stopAndSendVoiceMessage() {
         guard let (url, duration) = voiceManager.stopRecording() else { return }
-        recordingState = .none
-        dragOffset = .zero
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            recordingState = .none
+            dragOffset = .zero
+        }
         
         if duration < 1.0 {
             print("Voice message too short, discarded")
@@ -618,6 +630,17 @@ struct ChatDetailView: View {
             showUploadError = true
         }
         isUploadingMedia = false
+    }
+}
+
+struct RecordButtonStyle: ButtonStyle {
+    let onPressChanged: (Bool) -> Void
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, newValue in
+                onPressChanged(newValue)
+            }
     }
 }
 
