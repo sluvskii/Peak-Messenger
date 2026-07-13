@@ -683,7 +683,7 @@ struct RecordButtonStyle: ButtonStyle {
 
 // MARK: - Telegram Mic Physics
 
-class MicPhysicsEngine: ObservableObject {
+class MicPhysicsEngine: NSObject, ObservableObject {
     @Published var currentOffset: CGSize = .zero
     var targetOffset: CGSize = .zero {
         didSet {
