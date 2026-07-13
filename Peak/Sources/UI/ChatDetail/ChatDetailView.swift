@@ -22,10 +22,14 @@ struct ChatDetailView: View {
     @State private var uploadError = ""
     
     // Voice Message states
-    private var voiceManager = VoiceMessageManager.shared
+    var voiceManager = VoiceMessageManager.shared
     @State private var dragOffset: CGFloat = 0
     @State private var hasStartedRecording = false
     @State private var isShowingInfo = false
+
+    init(chat: Chat) {
+        self.chat = chat
+    }
 
     private var messages: [Message] {
         appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages

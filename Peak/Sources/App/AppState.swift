@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 // MARK: — AppState  (@Observable + @MainActor — Swift 6 concurrency-safe)
 
