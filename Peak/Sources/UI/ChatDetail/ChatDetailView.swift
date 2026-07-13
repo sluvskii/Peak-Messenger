@@ -256,7 +256,7 @@ struct ChatDetailView: View {
                             .frame(width: 44, height: 44)
                             .glassEffect(.regular.interactive(), in: Circle())
                             .contentShape(Rectangle())
-                            .gesture(recordGesture)
+                            .highPriorityGesture(recordGesture)
                     } else {
                         Button {
                             send()
@@ -304,31 +304,51 @@ struct ChatDetailView: View {
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 
-                // Right side: Active Mic Button with sliding Lock overlay
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.red)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: Circle())
-                    .scaleEffect(1.2)
-                    .overlay(alignment: .top) {
-                        VStack(spacing: 6) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(dragOffset.height < -40 ? .red : PeakColors.textPrimary)
-                            
-                            Image(systemName: "chevron.up")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(PeakColors.textSecondary)
-                                .offset(y: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
-                                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
-                        }
-                        .frame(width: 36, height: 60)
-                        .glassEffect(.regular.interactive(), in: Capsule())
-                        .offset(y: -75 + max(0, dragOffset.height * 0.2))
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                // Right side: Active Mic Button with dynamic pulsing audio waves
+                ZStack {
+                    let currentLevel = CGFloat(voiceManager.audioLevels.last ?? 0.1)
+                    
+                    // Pulsing Wave 1 (outer)
+                    Circle()
+                        .fill(Color.red.opacity(0.12))
+                        .frame(width: 76, height: 76)
+                        .scaleEffect(1.0 + currentLevel * 1.5)
+                        .animation(.easeOut(duration: 0.1), value: currentLevel)
+                    
+                    // Pulsing Wave 2 (inner)
+                    Circle()
+                        .fill(Color.red.opacity(0.22))
+                        .frame(width: 56, height: 56)
+                        .scaleEffect(1.0 + currentLevel * 1.1)
+                        .animation(.easeOut(duration: 0.1), value: currentLevel)
+                    
+                    // Solid white button with red mic icon
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.red)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white, in: Circle())
+                }
+                .frame(width: 44, height: 44)
+                .scaleEffect(1.2)
+                .overlay(alignment: .top) {
+                    VStack(spacing: 6) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(dragOffset.height < -40 ? .red : PeakColors.textPrimary)
+                        
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(PeakColors.textSecondary)
+                            .offset(y: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
+                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
                     }
-                    .gesture(recordGesture)
+                    .frame(width: 36, height: 60)
+                    .glassEffect(.regular.interactive(), in: Capsule())
+                    .offset(y: -75 + max(0, dragOffset.height * 0.2))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                .highPriorityGesture(recordGesture)
 
             case .locked:
                 // Delete button
@@ -372,7 +392,7 @@ struct ChatDetailView: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(PeakColors.black)
                         .frame(width: 44, height: 44)
-                        .background(PeakColors.textPrimary, in: Circle())
+                        .background(Color.white, in: Circle())
                 }
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
             }

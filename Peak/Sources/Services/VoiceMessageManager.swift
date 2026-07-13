@@ -38,14 +38,16 @@ final class VoiceMessageManager: NSObject {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
             try session.setActive(true)
             
-            // Check microphone permission
-            let granted = await withCheckedContinuation { continuation in
-                session.requestRecordPermission { granted in
-                    continuation.resume(returning: granted)
+            // Check microphone permission without async delay if already granted
+            let permission = session.recordPermission
+            if permission == .undetermined {
+                let granted = await withCheckedContinuation { continuation in
+                    session.requestRecordPermission { granted in
+                        continuation.resume(returning: granted)
+                    }
                 }
-            }
-            
-            guard granted else {
+                guard granted else { return }
+            } else if permission == .denied {
                 print("Microphone access denied")
                 return
             }
