@@ -12,12 +12,14 @@ final class CacheService: @unchecked Sendable {
     private let chatsURL: URL
     private let userURL: URL
     private let contactsURL: URL
+    private let reactionsURL: URL
     
     private init() {
         let documentsPath = URL.documentsDirectory
         chatsURL = documentsPath.appendingPathComponent("chats_cache.json")
         userURL = documentsPath.appendingPathComponent("user_cache.json")
         contactsURL = documentsPath.appendingPathComponent("contacts_cache.json")
+        reactionsURL = documentsPath.appendingPathComponent("reactions_cache.json")
     }
     
     // MARK: - Save
@@ -40,6 +42,12 @@ final class CacheService: @unchecked Sendable {
         }
     }
     
+    func saveReactions(_ reactions: [UUID: [Reaction]]) {
+        if let data = try? encoder.encode(reactions) {
+            try? data.write(to: reactionsURL, options: .atomic)
+        }
+    }
+    
     // MARK: - Load
     
     func loadChats() -> [Chat]? {
@@ -57,11 +65,17 @@ final class CacheService: @unchecked Sendable {
         return try? decoder.decode([User].self, from: data)
     }
     
+    func loadReactions() -> [UUID: [Reaction]]? {
+        guard let data = try? Data(contentsOf: reactionsURL) else { return nil }
+        return try? decoder.decode([UUID: [Reaction]].self, from: data)
+    }
+    
     // MARK: - Clear
     
     func clearAll() {
         try? FileManager.default.removeItem(at: chatsURL)
         try? FileManager.default.removeItem(at: userURL)
         try? FileManager.default.removeItem(at: contactsURL)
+        try? FileManager.default.removeItem(at: reactionsURL)
     }
 }

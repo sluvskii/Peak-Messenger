@@ -45,17 +45,24 @@ struct ChatRowView: View {
                 HStack(alignment: .bottom) {
                     // Last message preview
                     HStack(spacing: 4) {
-                        // Read receipt for my messages
-                        if let last = chat.lastMessage, last.isFromMe(myId: appState.currentUser?.id) {
-                            Image(systemName: last.isRead ? "checkmark.circle.fill" : "checkmark.circle")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(PeakColors.textTertiary)
-                        }
+                        if let typingIds = appState.typingUsers[chat.id], !typingIds.isEmpty {
+                            Text("печатает...")
+                                .font(PeakTypography.callout)
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .opacity(0.8)
+                        } else {
+                            // Read receipt for my messages
+                            if let last = chat.lastMessage, last.isFromMe(myId: appState.currentUser?.id) {
+                                Image(systemName: last.isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(PeakColors.textTertiary)
+                            }
 
-                        Text(chat.lastMessage?.displayText ?? "")
-                            .font(PeakTypography.callout)
-                            .foregroundStyle(PeakColors.textSecondary)
-                            .lineLimit(1)
+                            Text(chat.lastMessage?.displayText ?? "")
+                                .font(PeakTypography.callout)
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .lineLimit(1)
+                        }
                     }
 
                     Spacer()

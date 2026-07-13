@@ -20,6 +20,12 @@ struct ChatDetailView: View {
     
     @State private var showUploadError = false
     @State private var uploadError = ""
+    
+    // Voice Message states
+    private var voiceManager = VoiceMessageManager.shared
+    @State private var dragOffset: CGFloat = 0
+    @State private var hasStartedRecording = false
+    @State private var isShowingInfo = false
 
     private var messages: [Message] {
         appState.chat(for: chat.id)?.sortedMessages ?? chat.sortedMessages
@@ -95,8 +101,13 @@ struct ChatDetailView: View {
         .toolbar { navBarContent }
         .toolbarVisibility(.hidden, for: .tabBar)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $isShowingInfo) {
+            ChatInfoView(chat: chat)
+                .environment(appState)
+        }
         .onAppear {
             appState.markAllRead(in: chat.id)
+            appState.simulateMockTyping(for: chat.id)
             Task {
                 await appState.loadMessages(for: chat.id)
             }
@@ -127,6 +138,15 @@ struct ChatDetailView: View {
                                 removal: .opacity
                             ))
                             .contextMenu {
+                                Section("Реакция") {
+                                    Button("❤️") { react("❤️", to: message) }
+                                    Button("👍") { react("👍", to: message) }
+                                    Button("🔥") { react("🔥", to: message) }
+                                    Button("😂") { react("😂", to: message) }
+                                    Button("😢") { react("😢", to: message) }
+                                    Button("👏") { react("👏", to: message) }
+                                }
+                                
                                 Button {
                                     replyingMessage = message
                                     isInputFocused = true
@@ -176,65 +196,191 @@ struct ChatDetailView: View {
 
     // MARK: — Input Bar
 
+    // MARK: — Input Bar
+
     private var inputBar: some View {
         let uploading = isUploadingMedia
+        let recording = voiceManager.isRecording
+        
         return VStack(spacing: 0) {
             PeakDivider()
 
             HStack(alignment: .bottom, spacing: 10) {
-                // Attachment
-                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    if uploading {
-                        ProgressView()
-                            .frame(width: 36, height: 36)
-                    } else {
-                        Image(systemName: "plus")
-                            .font(.system(size: 22, weight: .regular))
-                            .foregroundStyle(PeakColors.textSecondary)
-                            .frame(width: 36, height: 36)
+                if recording {
+                    recordingHUD
+                    
+                    // Mic button (held down during recording)
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.red)
+                        .frame(width: 36, height: 36)
+                        .scaleEffect(hasStartedRecording ? 1.2 : 1.0)
+                        .animation(.spring(duration: 0.2), value: hasStartedRecording)
+                        .gesture(recordGesture)
+                } else {
+                    // Attachment
+                    PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                        if uploading {
+                            ProgressView()
+                                .frame(width: 36, height: 36)
+                        } else {
+                            Image(systemName: "plus")
+                                .font(.system(size: 22, weight: .regular))
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .frame(width: 36, height: 36)
+                        }
                     }
-                }
-                .disabled(uploading)
+                    .disabled(uploading)
 
-                // Text field
-                TextField("Сообщение", text: $messageText, axis: .vertical)
-                    .font(PeakTypography.body)
-                    .foregroundStyle(PeakColors.textPrimary)
-                    .lineLimit(1...6)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(PeakColors.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .focused($isInputFocused)
+                    // Text field
+                    TextField("Сообщение", text: $messageText, axis: .vertical)
+                        .font(PeakTypography.body)
+                        .foregroundStyle(PeakColors.textPrimary)
+                        .lineLimit(1...6)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(PeakColors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .focused($isInputFocused)
 
-                // Send / voice button
-                if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Button {
-                        // future: record voice
-                    } label: {
+                    // Send / voice button
+                    if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Image(systemName: "mic")
                             .font(.system(size: 22, weight: .regular))
                             .foregroundStyle(PeakColors.textSecondary)
                             .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                            .gesture(recordGesture)
+                    } else {
+                        Button {
+                            send()
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(PeakColors.black)
+                                .frame(width: 34, height: 34)
+                                .background(PeakColors.textPrimary)
+                                .clipShape(Circle())
+                        }
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
-                } else {
-                    Button {
-                        send()
-                    } label: {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(PeakColors.black)
-                            .frame(width: 34, height: 34)
-                            .background(PeakColors.textPrimary)
-                            .clipShape(Circle())
-                    }
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(PeakColors.black)
+            .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
             .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
+        }
+    }
+
+    private var recordingHUD: some View {
+        HStack(spacing: 12) {
+            // Pulsing dot
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundStyle(.red)
+                .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.2)
+            
+            Text(formatDuration(voiceManager.recordingDuration))
+                .font(PeakTypography.bodyMedium)
+                .foregroundStyle(PeakColors.textPrimary)
+                .monospacedDigit()
+            
+            // Audio levels visualization
+            HStack(spacing: 2) {
+                ForEach(0..<voiceManager.audioLevels.count, id: \.self) { index in
+                    let level = CGFloat(voiceManager.audioLevels[index])
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(PeakColors.textSecondary)
+                        .frame(width: 2, height: max(3, 20 * level))
+                }
+            }
+            .frame(height: 30)
+            
+            Spacer()
+            
+            Text(dragOffset < -60 ? "Отпустите" : "< Смахните")
+                .font(PeakTypography.caption)
+                .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
+                .offset(x: dragOffset)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(PeakColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+    }
+
+    private var recordGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                dragOffset = value.translation.width
+                if !hasStartedRecording {
+                    hasStartedRecording = true
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    Task {
+                        await voiceManager.startRecording()
+                    }
+                }
+            }
+            .onEnded { value in
+                hasStartedRecording = false
+                let offset = value.translation.width
+                if offset < -70 {
+                    voiceManager.cancelRecording()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } else {
+                    stopAndSendVoiceMessage()
+                }
+                dragOffset = 0
+            }
+    }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let mins = Int(duration) / 60
+        let secs = Int(duration) % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+
+    private func stopAndSendVoiceMessage() {
+        guard let (url, duration) = voiceManager.stopRecording() else { return }
+        if duration < 1.0 {
+            print("Voice message too short, discarded")
+            return
+        }
+        
+        Task {
+            do {
+                guard let data = try? Data(contentsOf: url) else { return }
+                guard let userId = appState.currentUser?.id else { return }
+                
+                let path = "\(chat.id)/\(UUID().uuidString).m4a"
+                let serverURL = try await StorageService.shared.uploadMedia(data, bucket: "messages", path: path, contentType: "audio/m4a")
+                
+                let msg = Message(
+                    id: UUID(),
+                    chatId: chat.id,
+                    senderId: userId,
+                    type: .voice,
+                    text: nil,
+                    mediaUrl: serverURL.absoluteString,
+                    fileName: "Golosovoe.m4a",
+                    fileSize: data.count,
+                    duration: duration,
+                    timestamp: Date(),
+                    isRead: false,
+                    isEdited: false,
+                    replyToId: replyingMessage?.id
+                )
+                
+                appState.send(msg)
+                replyingMessage = nil
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } catch {
+                print("Failed to send voice message: \(error)")
+                uploadError = error.localizedDescription
+                showUploadError = true
+            }
         }
     }
 
@@ -244,15 +390,21 @@ struct ChatDetailView: View {
     private var navBarContent: some ToolbarContent {
         ToolbarItem(placement: .principal) {
             Button {
-                // open profile detail
+                isShowingInfo = true
             } label: {
                 VStack(spacing: 2) {
                     Text(participant.username)
                         .font(PeakTypography.headline)
                         .foregroundStyle(PeakColors.textPrimary)
-                    Text(participant.lastSeenText)
-                        .font(PeakTypography.tiny)
-                        .foregroundStyle(PeakColors.textSecondary)
+                    if let typingIds = appState.typingUsers[chat.id], !typingIds.isEmpty {
+                        Text("печатает...")
+                            .font(PeakTypography.tiny)
+                            .foregroundStyle(PeakColors.accent)
+                    } else {
+                        Text(participant.lastSeenText)
+                            .font(PeakTypography.tiny)
+                            .foregroundStyle(PeakColors.textSecondary)
+                    }
                 }
             }
             .buttonStyle(.plain)
@@ -264,6 +416,17 @@ struct ChatDetailView: View {
     }
 
     // MARK: — Helpers
+
+    private func react(_ emoji: String, to message: Message) {
+        if let myId = appState.currentUser?.id {
+            if let existing = appState.reactions[message.id], existing.contains(where: { $0.emoji == emoji && $0.senderId == myId.uuidString }) {
+                appState.removeReaction(from: message.id, senderId: myId)
+            } else {
+                appState.addReaction(emoji, to: message.id, senderId: myId)
+            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+    }
 
     private func send() {
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -47,8 +47,12 @@ struct LoginView: View {
                         
                         SecureField("Пароль", text: $password)
                             .padding()
-                            .background(Color(white: 0.15))
+                            .background(PeakColors.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(PeakColors.divider, lineWidth: 0.5)
+                            )
                             .foregroundStyle(PeakColors.textPrimary)
                     }
 
@@ -93,8 +97,12 @@ struct LoginView: View {
     private func authTextField(title: String, text: Binding<String>) -> some View {
         TextField(title, text: text)
             .padding()
-            .background(Color(white: 0.15))
+            .background(PeakColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(PeakColors.divider, lineWidth: 0.5)
+            )
             .foregroundStyle(PeakColors.textPrimary)
     }
 

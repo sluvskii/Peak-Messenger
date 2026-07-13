@@ -77,7 +77,7 @@ struct ContactsView: View {
 
             // Message shortcut
             Button {
-                // navigate to chat
+                openChat(with: user)
             } label: {
                 Image(systemName: "bubble.right")
                     .font(.system(size: 17, weight: .light))

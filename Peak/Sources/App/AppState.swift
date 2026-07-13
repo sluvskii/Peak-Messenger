@@ -17,6 +17,10 @@ final class AppState {
     var currentUser: User? = CacheService.shared.loadUser()
     var contacts: [User] = CacheService.shared.loadContacts() ?? []
     var isLoadingChats = false
+    
+    // Custom States (Reactions, Typing)
+    var reactions: [UUID: [Reaction]] = CacheService.shared.loadReactions() ?? [:]
+    var typingUsers: [UUID: Set<UUID>] = [:]
 
     func checkSession() async {
         for await (_, session) in AuthenticationService.shared.authStateChanges {
@@ -198,6 +202,7 @@ final class AppState {
             } catch {
                 print("Failed to send message: \(error)")
             }
+            triggerMockResponseIfNeeded(chatId: message.chatId)
         }
     }
     
@@ -300,7 +305,112 @@ final class AppState {
         }
     }
 
-
-
     var totalUnread: Int { chats.reduce(0) { $0 + $1.unreadCount(myId: currentUser?.id) } }
+
+    // MARK: — Reactions & Typing Indicator Simulation
+
+    func setTyping(userId: UUID, in chatId: UUID, isTyping: Bool) {
+        if isTyping {
+            var currentSet = typingUsers[chatId] ?? []
+            currentSet.insert(userId)
+            typingUsers[chatId] = currentSet
+        } else {
+            typingUsers[chatId]?.remove(userId)
+            if typingUsers[chatId]?.isEmpty == true {
+                typingUsers.removeValue(forKey: chatId)
+            }
+        }
+    }
+
+    func addReaction(_ emoji: String, to messageId: UUID, senderId: UUID) {
+        let reaction = Reaction(id: UUID().uuidString, emoji: emoji, senderId: senderId.uuidString)
+        var list = reactions[messageId, default: []]
+        list.removeAll { $0.senderId == senderId.uuidString }
+        list.append(reaction)
+        reactions[messageId] = list
+        CacheService.shared.saveReactions(reactions)
+    }
+
+    func removeReaction(from messageId: UUID, senderId: UUID) {
+        reactions[messageId]?.removeAll { $0.senderId == senderId.uuidString }
+        if reactions[messageId]?.isEmpty == true {
+            reactions.removeValue(forKey: messageId)
+        }
+        CacheService.shared.saveReactions(reactions)
+    }
+
+    func simulateMockTyping(for chatId: UUID) {
+        guard let chat = chat(for: chatId),
+              let mockUser = chat.otherParticipant(myId: currentUser?.id),
+              mockUser.id != currentUser?.id else { return }
+              
+        let mockIds = [
+            UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, // Alex
+            UUID(uuidString: "00000000-0000-0000-0000-000000000003")!, // Sam
+            UUID(uuidString: "00000000-0000-0000-0000-000000000004")!, // Nina
+            UUID(uuidString: "00000000-0000-0000-0000-000000000005")!  // Jay
+        ]
+        guard mockIds.contains(mockUser.id) else { return }
+
+        Task {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            
+            setTyping(userId: mockUser.id, in: chatId, isTyping: true)
+            
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            
+            setTyping(userId: mockUser.id, in: chatId, isTyping: false)
+        }
+    }
+
+    func triggerMockResponseIfNeeded(chatId: UUID) {
+        guard let chat = chat(for: chatId),
+              let mockUser = chat.otherParticipant(myId: currentUser?.id),
+              mockUser.id != currentUser?.id else { return }
+              
+        let mockReplies = [
+            UUID(uuidString: "00000000-0000-0000-0000-000000000002")!: "О, привет! Как дела? Рад слышать.",
+            UUID(uuidString: "00000000-0000-0000-0000-000000000003")!: "Отличный дизайн! Кофе готов ☕️",
+            UUID(uuidString: "00000000-0000-0000-0000-000000000004")!: "Темная тема просто супер. Отправляю макеты...",
+            UUID(uuidString: "00000000-0000-0000-0000-000000000005")!: "Йоу! Давай созвонимся позже 👍"
+        ]
+        
+        guard let replyText = mockReplies[mockUser.id] else { return }
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            
+            setTyping(userId: mockUser.id, in: chatId, isTyping: true)
+            
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            
+            setTyping(userId: mockUser.id, in: chatId, isTyping: false)
+            
+            let replyMsg = Message(
+                id: UUID(),
+                chatId: chatId,
+                senderId: mockUser.id,
+                type: .text,
+                text: replyText,
+                mediaUrl: nil,
+                fileName: nil,
+                fileSize: nil,
+                duration: nil,
+                timestamp: Date(),
+                isRead: false,
+                isEdited: false,
+                replyToId: chat.messages.last?.id
+            )
+            
+            if let idx = chats.firstIndex(where: { $0.id == chatId }) {
+                chats[idx].messages.append(replyMsg)
+                saveChatsToCache()
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        }
+    }
 }

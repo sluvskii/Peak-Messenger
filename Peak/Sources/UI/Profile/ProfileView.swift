@@ -50,10 +50,12 @@ struct ProfileView: View {
         }
     }
 
-    @State private var isEditingUsername = false
-    @State private var newUsername = ""
-    @State private var isEditingBio = false
-    @State private var newBio = ""
+    @State private var isShowingEditSheet = false
+    
+    // Interactive settings values persisted in AppStorage
+    @AppStorage("settings_notifications") private var notificationsEnabled = true
+    @AppStorage("settings_privacy") private var privacyLockEnabled = false
+    @AppStorage("settings_read_receipts") private var readReceiptsEnabled = true
 
     // MARK: — Header
 
@@ -93,8 +95,7 @@ struct ProfileView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    newUsername = user.username
-                    isEditingUsername = true
+                    isShowingEditSheet = true
                 }
 
                 if !user.bio.isEmpty {
@@ -104,13 +105,11 @@ struct ProfileView: View {
                         .multilineTextAlignment(.center)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            newBio = user.bio
-                            isEditingBio = true
+                            isShowingEditSheet = true
                         }
                 } else {
                     Button("Добавить описание") {
-                        newBio = ""
-                        isEditingBio = true
+                        isShowingEditSheet = true
                     }
                     .font(PeakTypography.callout)
                     .foregroundStyle(PeakColors.accent)
@@ -118,45 +117,9 @@ struct ProfileView: View {
             }
         }
         .padding(.bottom, 20)
-        .alert("Изменить имя", isPresented: $isEditingUsername) {
-            TextField("Новое имя", text: $newUsername)
-            Button("Отмена", role: .cancel) { }
-            Button("Сохранить") {
-                Task {
-                    await saveUsername(newUsername)
-                }
-            }
-        }
-        .alert("Изменить описание", isPresented: $isEditingBio) {
-            TextField("О себе", text: $newBio)
-            Button("Отмена", role: .cancel) { }
-            Button("Сохранить") {
-                Task {
-                    await saveBio(newBio)
-                }
-            }
-        }
-    }
-
-    private func saveUsername(_ name: String) async {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        
-        do {
-            try await DatabaseService.shared.updateUsername(trimmed)
-            appState.currentUser?.username = trimmed
-        } catch {
-            print("Failed to update username: \(error)")
-        }
-    }
-
-    private func saveBio(_ bio: String) async {
-        let trimmed = bio.trimmingCharacters(in: .whitespacesAndNewlines)
-        do {
-            try await DatabaseService.shared.updateBio(trimmed)
-            appState.currentUser?.bio = trimmed
-        } catch {
-            print("Failed to update bio: \(error)")
+        .sheet(isPresented: $isShowingEditSheet) {
+            EditProfileSheet(user: user)
+                .environment(appState)
         }
     }
 
@@ -209,11 +172,11 @@ struct ProfileView: View {
         VStack(spacing: 0) {
             SectionHeader(title: "Настройки")
 
-            SettingsRow(icon: "bell.fill",        title: "Уведомления")
+            SettingsToggleRow(icon: "bell.fill", title: "Уведомления", isOn: $notificationsEnabled)
             PeakDivider().padding(.leading, 52)
-            SettingsRow(icon: "lock.fill",         title: "Конфиденциальность")
+            SettingsToggleRow(icon: "lock.fill", title: "Защита приложения", isOn: $privacyLockEnabled)
             PeakDivider().padding(.leading, 52)
-            SettingsRow(icon: "questionmark.circle.fill", title: "Помощь")
+            SettingsToggleRow(icon: "eye.fill", title: "Отчеты о прочтении", isOn: $readReceiptsEnabled)
             PeakDivider().padding(.leading, 52)
             
             Button {
@@ -291,31 +254,26 @@ struct InfoRow: View {
     }
 }
 
-struct SettingsRow: View {
+struct SettingsToggleRow: View {
     let icon: String
     let title: String
+    @Binding var isOn: Bool
 
     var body: some View {
-        Button {
-            // navigate
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .frame(width: 22)
-                    .foregroundStyle(PeakColors.textSecondary)
-                Text(title)
-                    .font(PeakTypography.body)
-                    .foregroundStyle(PeakColors.textPrimary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(PeakColors.textTertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .frame(width: 22)
+                .foregroundStyle(PeakColors.textSecondary)
+            Text(title)
+                .font(PeakTypography.body)
+                .foregroundStyle(PeakColors.textPrimary)
+            Spacer()
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .tint(PeakColors.textPrimary)
         }
-        .buttonStyle(PressButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
 
