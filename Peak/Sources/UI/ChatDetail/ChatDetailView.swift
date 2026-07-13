@@ -274,6 +274,7 @@ struct ChatDetailView: View {
                             .foregroundStyle(PeakColors.textSecondary)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
+                            .shimmer()
                     }
                     .opacity(max(0.1, 1.0 - Double(abs(micPhysics.currentOffset.width)) / 100.0))
                 }
@@ -301,24 +302,25 @@ struct ChatDetailView: View {
 
                 // Lock recording view
                 HStack(spacing: 12) {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(PeakColors.textPrimary)
-                        .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
-                    
-                    Text(formatTelegramDuration(voiceManager.recordingDuration))
-                        .font(PeakTypography.bodyMedium)
-                        .foregroundStyle(PeakColors.textPrimary)
-                        .monospacedDigit()
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.red)
+                            .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
+                        
+                        Text(formatTelegramDuration(voiceManager.recordingDuration))
+                            .font(PeakTypography.bodyMedium)
+                            .foregroundStyle(PeakColors.textPrimary)
+                            .monospacedDigit()
+                    }
                     
                     Spacer()
                     
-                    Text("Запись...")
-                        .font(PeakTypography.body)
-                        .foregroundStyle(PeakColors.textSecondary)
+                    // Waveform visualizer in the middle
+                    RealtimeWaveformView(levels: voiceManager.audioLevels)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 11)
+                .padding(.vertical, 8)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -350,107 +352,18 @@ struct ChatDetailView: View {
                     }
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else {
-                    // Persistent Voice Recording Button
-                    Button {
-                    } label: {
-                        ZStack {
-                            if recordingState == .holding {
-                                let currentLevel = CGFloat(voiceManager.audioLevels.last ?? 0.1)
-                                
-                                // White pulsing waves (outer)
-                                Circle()
-                                    .fill(Color.white.opacity(0.08))
-                                    .frame(width: 90, height: 90)
-                                    .scaleEffect(1.0 + currentLevel * 1.5)
-                                    .animation(.easeOut(duration: 0.15), value: currentLevel)
-                                
-                                // White pulsing waves (inner)
-                                Circle()
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 70, height: 70)
-                                    .scaleEffect(1.0 + currentLevel * 1.1)
-                                    .animation(.easeOut(duration: 0.15), value: currentLevel)
-                                
-                                // Massive white circle with black mic icon
-                                Image(systemName: "mic.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(PeakColors.black)
-                                    .frame(width: 56, height: 56)
-                                    .background(Color.white, in: Circle())
-                            } else {
-                                // Standard mic button appearance
-                                Image(systemName: "mic")
-                                    .font(.system(size: 19))
-                                    .foregroundStyle(PeakColors.textPrimary)
-                                    .frame(width: 44, height: 44)
-                                    .glassEffect(.regular.interactive(), in: Circle())
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RecordButtonStyle(onPressChanged: { isPressed in
-                        if isPressed {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                                recordingState = .holding
-                            }
-                            micPhysics.reset()
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            Task {
-                                await voiceManager.startRecording()
-                            }
-                        } else {
-                            if recordingState == .holding {
-                                stopAndSendVoiceMessage()
-                            }
-                        }
-                    }))
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                guard recordingState == .holding else { return }
-                                // Telegram physics target tracking (diagonal allowed)
-                                micPhysics.targetOffset = value.translation
-                                
-                                // 1. Horizontal swipe-to-cancel check (Telegram constant: 150)
-                                if value.translation.width < -150 {
-                                    cancelAndDiscardRecording()
-                                    micPhysics.reset()
-                                }
-                                
-                                // 2. Vertical swipe-to-lock check (Telegram constant: 110)
-                                if value.translation.height < -110 {
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) {
-                                        recordingState = .locked
-                                    }
-                                    micPhysics.reset()
-                                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                }
-                            }
-                            .onEnded { _ in
-                                if recordingState == .holding {
-                                    micPhysics.reset()
-                                }
-                            }
-                    )
-                    // Perfectly center the 56pt massive button relative to the 44pt text field!
-                    .alignmentGuide(.bottom) { d in
-                        recordingState == .holding ? d[.bottom] - 6 : d[.bottom]
-                    }
-                    // Button physically follows finger in 2D space using Telegram's 0.3 interpolation factor!
-                    .offset(
-                        x: recordingState == .holding ? min(0, micPhysics.currentOffset.width) : 0,
-                        y: recordingState == .holding ? min(0, micPhysics.currentOffset.height) : 0
-                    )
-                    .overlay(alignment: .top) {
+                    // Persistent Voice Recording Button with ZStack wrapper for stationary lock slider
+                    ZStack(alignment: .bottom) {
                         if recordingState == .holding {
                             let distance = abs(micPhysics.currentOffset.height)
                             let isClose = micPhysics.currentOffset.height < -60
                             
                             VStack(spacing: 6) {
-                                Image(systemName: "lock.fill")
+                                Image(systemName: isClose ? "lock.open.fill" : "lock.fill")
                                     .font(.system(size: 14))
                                     .foregroundStyle(isClose ? PeakColors.textPrimary : PeakColors.textSecondary)
                                     .scaleEffect(isClose ? 1.25 : 1.0)
+                                    .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isClose)
                                 
                                 Image(systemName: "chevron.up")
                                     .font(.system(size: 10, weight: .bold))
@@ -465,6 +378,96 @@ struct ChatDetailView: View {
                             .scaleEffect(max(0.7, 1.0 - (distance / 200.0)))
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
+                        
+                        Button {
+                        } label: {
+                            ZStack {
+                                if recordingState == .holding {
+                                    let currentLevel = CGFloat(voiceManager.audioLevels.last ?? 0.1)
+                                    
+                                    // White pulsing waves (outer)
+                                    Circle()
+                                        .fill(Color.white.opacity(0.08))
+                                        .frame(width: 90, height: 90)
+                                        .scaleEffect(1.0 + currentLevel * 1.5)
+                                        .animation(.easeOut(duration: 0.15), value: currentLevel)
+                                    
+                                    // White pulsing waves (inner)
+                                    Circle()
+                                        .fill(Color.white.opacity(0.18))
+                                        .frame(width: 70, height: 70)
+                                        .scaleEffect(1.0 + currentLevel * 1.1)
+                                        .animation(.easeOut(duration: 0.15), value: currentLevel)
+                                    
+                                    // Massive white circle with black mic icon
+                                    Image(systemName: "mic.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(PeakColors.black)
+                                        .frame(width: 56, height: 56)
+                                        .background(Color.white, in: Circle())
+                                } else {
+                                    // Standard mic button appearance
+                                    Image(systemName: "mic")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(PeakColors.textPrimary)
+                                        .frame(width: 44, height: 44)
+                                        .glassEffect(.regular.interactive(), in: Circle())
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(RecordButtonStyle(onPressChanged: { isPressed in
+                            if isPressed {
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                                    recordingState = .holding
+                                }
+                                micPhysics.reset()
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                Task {
+                                    await voiceManager.startRecording()
+                                }
+                            } else {
+                                if recordingState == .holding {
+                                    stopAndSendVoiceMessage()
+                                }
+                            }
+                        }))
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    guard recordingState == .holding else { return }
+                                    // Telegram physics target tracking (diagonal allowed)
+                                    micPhysics.targetOffset = value.translation
+                                    
+                                    // 1. Horizontal swipe-to-cancel check (Telegram constant: 150)
+                                    if value.translation.width < -150 {
+                                        cancelAndDiscardRecording()
+                                        micPhysics.reset()
+                                    }
+                                    
+                                    // 2. Vertical swipe-to-lock check (Telegram constant: 110)
+                                    if value.translation.height < -110 {
+                                        withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) {
+                                            recordingState = .locked
+                                        }
+                                        micPhysics.reset()
+                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                    }
+                                }
+                                .onEnded { _ in
+                                    if recordingState == .holding {
+                                        micPhysics.reset()
+                                    }
+                                }
+                        )
+                        // Perfectly center the 56pt massive button relative to the 44pt text field!
+                        .alignmentGuide(.bottom) { d in
+                            recordingState == .holding ? d[.bottom] - 6 : d[.bottom]
+                        }
+                        // Button physically follows finger vertically only in 2D space using Telegram's 0.3 interpolation factor!
+                        .offset(
+                            y: recordingState == .holding ? min(0, micPhysics.currentOffset.height) : 0
+                        )
                     }
                 }
             }
