@@ -22,9 +22,14 @@ struct ChatDetailView: View {
     @State private var uploadError = ""
     
     // Voice Message states
+    enum RecordingState {
+        case none
+        case holding
+        case locked
+    }
     var voiceManager = VoiceMessageManager.shared
-    @State private var dragOffset: CGFloat = 0
-    @State private var hasStartedRecording = false
+    @State private var dragOffset: CGSize = .zero
+    @State private var recordingState: RecordingState = .none
     @State private var isShowingInfo = false
 
     init(chat: Chat) {
@@ -208,23 +213,10 @@ struct ChatDetailView: View {
 
     private var inputBar: some View {
         let uploading = isUploadingMedia
-        let recording = voiceManager.isRecording
         
         return HStack(alignment: .bottom, spacing: 10) {
-            if recording {
-                recordingHUD
-                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                
-                // Mic button (held down during recording)
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.red)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: Circle())
-                    .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
-                    .animation(.spring(duration: 0.2), value: hasStartedRecording)
-                    .gesture(recordGesture)
-            } else {
+            switch recordingState {
+            case .none:
                 // Attachment Button
                 PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
                     ZStack {
@@ -278,94 +270,172 @@ struct ChatDetailView: View {
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                 }
+
+            case .holding:
+                // Left side: Centiseconds timer and swipe to cancel label
+                HStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.red)
+                            .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
+                        
+                        Text(formatTelegramDuration(voiceManager.recordingDuration))
+                            .font(PeakTypography.bodyMedium)
+                            .foregroundStyle(PeakColors.textPrimary)
+                            .monospacedDigit()
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(PeakColors.textSecondary)
+                        
+                        Text("Влево — отмена")
+                            .font(PeakTypography.body)
+                            .foregroundStyle(PeakColors.textSecondary)
+                    }
+                    .opacity(max(0.1, 1.0 - Double(abs(dragOffset.width)) / 100.0))
+                    .offset(x: dragOffset.width * 0.4)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                
+                // Right side: Active Mic Button with sliding Lock overlay
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.red)
+                    .frame(width: 44, height: 44)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                    .scaleEffect(1.2)
+                    .overlay(alignment: .top) {
+                        VStack(spacing: 6) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(dragOffset.height < -40 ? .red : PeakColors.textPrimary)
+                            
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(PeakColors.textSecondary)
+                                .offset(y: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
+                                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
+                        }
+                        .frame(width: 36, height: 60)
+                        .glassEffect(.regular.interactive(), in: Capsule())
+                        .offset(y: -75 + max(0, dragOffset.height * 0.2))
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                    .gesture(recordGesture)
+
+            case .locked:
+                // Delete button
+                Button {
+                    cancelAndDiscardRecording()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.red)
+                        .frame(width: 44, height: 44)
+                }
+                .glassEffect(.regular.interactive(), in: Circle())
+
+                // Lock recording view
+                HStack(spacing: 12) {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.red)
+                        .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
+                    
+                    Text(formatTelegramDuration(voiceManager.recordingDuration))
+                        .font(PeakTypography.bodyMedium)
+                        .foregroundStyle(PeakColors.textPrimary)
+                        .monospacedDigit()
+                    
+                    Spacer()
+                    
+                    Text("Запись...")
+                        .font(PeakTypography.body)
+                        .foregroundStyle(PeakColors.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                // Send button
+                Button {
+                    stopAndSendVoiceMessage()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(PeakColors.black)
+                        .frame(width: 44, height: 44)
+                        .background(PeakColors.textPrimary, in: Circle())
+                }
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
             }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
         .background(Color.clear)
-        .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
-        .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
-    }
-
-    private var recordingHUD: some View {
-        HStack(spacing: 12) {
-            // Pulsing dot + Duration
-            HStack(spacing: 6) {
-                Image(systemName: "circle.fill")
-                    .font(.system(size: 8))
-                    .foregroundStyle(.red)
-                    .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
-                
-                Text(formatDuration(voiceManager.recordingDuration))
-                    .font(PeakTypography.bodyMedium)
-                    .foregroundStyle(PeakColors.textPrimary)
-                    .monospacedDigit()
-            }
-            
-            // Audio levels visualization (fixed width to prevent layout shifting)
-            HStack(spacing: 2.5) {
-                ForEach(0..<voiceManager.audioLevels.count, id: \.self) { index in
-                    let level = CGFloat(voiceManager.audioLevels[index])
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(PeakColors.textPrimary)
-                        .frame(width: 3, height: max(4, 24 * level))
-                }
-            }
-            .frame(width: 70, height: 30)
-            
-            Spacer()
-            
-            // Cancel swipe gesture indicator (no wrapping, animated chevron)
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(PeakColors.textSecondary)
-                    .offset(x: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
-                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
-                
-                Text("Отмена")
-                    .font(PeakTypography.caption)
-                    .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
-            }
-            .offset(x: dragOffset)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .animation(.spring(duration: 0.25, bounce: 0.3), value: recordingState)
     }
 
     private var recordGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                dragOffset = value.translation.width
-                if !hasStartedRecording {
-                    hasStartedRecording = true
+                if recordingState == .none {
+                    recordingState = .holding
+                    dragOffset = .zero
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     Task {
                         await voiceManager.startRecording()
                     }
                 }
+                
+                guard recordingState == .holding else { return }
+                dragOffset = value.translation
+                
+                // 1. Horizontal swipe-to-cancel check (dragged left)
+                if value.translation.width < -100 {
+                    cancelAndDiscardRecording()
+                }
+                
+                // 2. Vertical swipe-to-lock check (dragged up)
+                if value.translation.height < -70 {
+                    recordingState = .locked
+                    dragOffset = .zero
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
             }
-            .onEnded { value in
-                hasStartedRecording = false
-                let offset = value.translation.width
-                if offset < -70 {
-                    voiceManager.cancelRecording()
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                } else {
+            .onEnded { _ in
+                if recordingState == .holding {
                     stopAndSendVoiceMessage()
                 }
-                dragOffset = 0
             }
     }
 
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let mins = Int(duration) / 60
-        let secs = Int(duration) % 60
-        return String(format: "%02d:%02d", mins, secs)
+    private func formatTelegramDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        let centiseconds = Int((duration.truncatingRemainder(dividingBy: 1)) * 100)
+        return String(format: "%d:%02d,%02d", minutes, seconds, centiseconds)
+    }
+
+    private func cancelAndDiscardRecording() {
+        voiceManager.cancelRecording()
+        recordingState = .none
+        dragOffset = .zero
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func stopAndSendVoiceMessage() {
         guard let (url, duration) = voiceManager.stopRecording() else { return }
+        recordingState = .none
+        dragOffset = .zero
+        
         if duration < 1.0 {
             print("Voice message too short, discarded")
             return
