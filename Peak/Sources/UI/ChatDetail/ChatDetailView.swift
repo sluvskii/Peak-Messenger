@@ -461,7 +461,7 @@ struct ChatDetailView: View {
                             .frame(width: 36, height: 60)
                             .glassEffect(.regular.interactive(), in: Capsule())
                             .offset(y: -75)
-                            .opacity(max(0.0, 1.0 - Double(abs(dragOffset.width)) / 50.0))
+                            .opacity(max(0.0, 1.0 - Double(abs(micPhysics.currentOffset.width)) / 50.0))
                             .scaleEffect(max(0.7, 1.0 - (distance / 200.0)))
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
@@ -485,7 +485,7 @@ struct ChatDetailView: View {
         voiceManager.cancelRecording()
         withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
             recordingState = .none
-            dragOffset = .zero
+            micPhysics.reset()
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -494,7 +494,7 @@ struct ChatDetailView: View {
         guard let (url, duration) = voiceManager.stopRecording() else { return }
         withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
             recordingState = .none
-            dragOffset = .zero
+            micPhysics.reset()
         }
         
         if duration < 1.0 {
