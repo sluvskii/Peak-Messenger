@@ -735,3 +735,54 @@ class MicPhysicsEngine: NSObject, ObservableObject {
         }
     }
 }
+
+// MARK: - Voice Recording UI Elements
+
+struct RealtimeWaveformView: View {
+    let levels: [Float]
+    var maxBars: Int = 30
+    
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<maxBars, id: \.self) { index in
+                let level = levels.count > index ? CGFloat(levels[index]) : 0.05
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(PeakColors.textPrimary)
+                    .frame(width: 3, height: max(4, 30 * level))
+                    .animation(.spring(response: 0.2, dampingFraction: 0.6), value: level)
+            }
+        }
+        .frame(height: 30)
+    }
+}
+
+struct ShimmerEffectModifier: ViewModifier {
+    @State private var phase: CGFloat = -0.5
+    
+    func body(content: Content) -> some View {
+        content
+            .mask(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: phase),
+                        .init(color: .black, location: phase + 0.1),
+                        .init(color: .black, location: phase + 0.2),
+                        .init(color: .clear, location: phase + 0.3)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    phase = 1.0
+                }
+            }
+    }
+}
+
+extension View {
+    func shimmer() -> some View {
+        modifier(ShimmerEffectModifier())
+    }
+}
