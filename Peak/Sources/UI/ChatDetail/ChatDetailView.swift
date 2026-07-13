@@ -220,18 +220,18 @@ struct ChatDetailView: View {
                     ZStack {
                         if uploading {
                             ProgressView()
-                                .tint(.white)
+                                .tint(PeakColors.textSecondary)
                         } else {
-                            Image(systemName: "plus")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(PeakColors.textPrimary)
+                            Image(systemName: "paperclip")
+                                .font(.system(size: 24, weight: .regular))
+                                .foregroundStyle(PeakColors.textSecondary)
                         }
                     }
-                    .frame(width: 44, height: 44)
+                    .frame(width: 32, height: 32)
                 }
-                .glassEffect(.regular.interactive(), in: Circle())
                 .disabled(uploading)
                 .buttonStyle(PressButtonStyle())
+                .padding(.bottom, 6)
                 .transition(.move(edge: .leading).combined(with: .opacity))
 
                 // Text field
@@ -243,8 +243,8 @@ struct ChatDetailView: View {
                         .focused($isInputFocused)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 11)
-                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .transition(.move(edge: .leading).combined(with: .opacity))
                 
             } else if recordingState == .holding {
@@ -253,7 +253,7 @@ struct ChatDetailView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "circle.fill")
                             .font(.system(size: 8))
-                            .foregroundStyle(PeakColors.textPrimary)
+                            .foregroundStyle(Color.red)
                             .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
                         
                         Text(formatTelegramDuration(voiceManager.recordingDuration))
@@ -278,9 +278,8 @@ struct ChatDetailView: View {
                     }
                     .opacity(max(0.1, 1.0 - Double(abs(micPhysics.currentOffset.width)) / 100.0))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 11)
-                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.vertical, 12)
+                .padding(.horizontal, 4)
                 .offset(x: min(0, micPhysics.currentOffset.width * 0.8))
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -293,11 +292,11 @@ struct ChatDetailView: View {
                     cancelAndDiscardRecording()
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 18))
-                        .foregroundStyle(PeakColors.textPrimary)
-                        .frame(width: 44, height: 44)
+                        .font(.system(size: 22))
+                        .foregroundStyle(PeakColors.textSecondary)
+                        .frame(width: 32, height: 32)
                 }
-                .glassEffect(.regular.interactive(), in: Circle())
+                .padding(.bottom, 6)
                 .transition(.scale.combined(with: .opacity))
 
                 // Lock recording view
@@ -319,9 +318,7 @@ struct ChatDetailView: View {
                     // Waveform visualizer in the middle
                     RealtimeWaveformView(levels: voiceManager.audioLevels)
                 }
-                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
             
@@ -335,9 +332,10 @@ struct ChatDetailView: View {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(PeakColors.black)
-                            .frame(width: 44, height: 44)
-                            .background(PeakColors.textPrimary, in: Circle())
+                            .frame(width: 34, height: 34)
+                            .background(PeakColors.accent, in: Circle())
                     }
+                    .padding(.bottom, 5)
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else if recordingState == .locked {
                     // locked mode send button
@@ -347,9 +345,10 @@ struct ChatDetailView: View {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(PeakColors.black)
-                            .frame(width: 44, height: 44)
-                            .background(Color.white, in: Circle())
+                            .frame(width: 34, height: 34)
+                            .background(PeakColors.accent, in: Circle())
                     }
+                    .padding(.bottom, 5)
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else {
                     // Persistent Voice Recording Button with ZStack wrapper for stationary lock slider
@@ -387,31 +386,30 @@ struct ChatDetailView: View {
                                     
                                     // White pulsing waves (outer)
                                     Circle()
-                                        .fill(Color.white.opacity(0.08))
+                                        .fill(PeakColors.accent.opacity(0.1))
                                         .frame(width: 90, height: 90)
                                         .scaleEffect(1.0 + currentLevel * 1.5)
                                         .animation(.easeOut(duration: 0.15), value: currentLevel)
                                     
                                     // White pulsing waves (inner)
                                     Circle()
-                                        .fill(Color.white.opacity(0.18))
+                                        .fill(PeakColors.accent.opacity(0.2))
                                         .frame(width: 70, height: 70)
                                         .scaleEffect(1.0 + currentLevel * 1.1)
                                         .animation(.easeOut(duration: 0.15), value: currentLevel)
                                     
-                                    // Massive white circle with black mic icon
+                                    // Massive accent circle with mic icon
                                     Image(systemName: "mic.fill")
                                         .font(.system(size: 24))
                                         .foregroundStyle(PeakColors.black)
                                         .frame(width: 56, height: 56)
-                                        .background(Color.white, in: Circle())
+                                        .background(PeakColors.accent, in: Circle())
                                 } else {
                                     // Standard mic button appearance
                                     Image(systemName: "mic")
-                                        .font(.system(size: 19))
-                                        .foregroundStyle(PeakColors.textPrimary)
-                                        .frame(width: 44, height: 44)
-                                        .glassEffect(.regular.interactive(), in: Circle())
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(PeakColors.textSecondary)
+                                        .frame(width: 34, height: 34)
                                 }
                             }
                             .contentShape(Rectangle())
@@ -460,21 +458,30 @@ struct ChatDetailView: View {
                                     }
                                 }
                         )
-                        // Perfectly center the 56pt massive button relative to the 44pt text field!
+                        // Perfectly center the 56pt massive button relative to the 34pt standard button!
                         .alignmentGuide(.bottom) { d in
-                            recordingState == .holding ? d[.bottom] - 6 : d[.bottom]
+                            recordingState == .holding ? d[.bottom] - 11 : d[.bottom]
                         }
                         // Button physically follows finger vertically only in 2D space using Telegram's 0.3 interpolation factor!
                         .offset(
                             y: recordingState == .holding ? min(0, micPhysics.currentOffset.height) : 0
                         )
                     }
+                    .padding(.bottom, 5)
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 8)
-        .background(Color.clear)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            Rectangle()
+                .fill(.clear)
+                .glassEffect(.regular.interactive(), in: Rectangle())
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .overlay(alignment: .top) {
+            Divider().opacity(0.3)
+        }
     }
 
     private func formatTelegramDuration(_ duration: TimeInterval) -> String {
