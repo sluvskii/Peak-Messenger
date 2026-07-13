@@ -28,7 +28,7 @@ struct ChatDetailView: View {
         case locked
     }
     var voiceManager = VoiceMessageManager.shared
-    @State private var dragOffset: CGSize = .zero
+    @StateObject private var micPhysics = MicPhysicsEngine()
     @State private var recordingState: RecordingState = .none
     @State private var isShowingInfo = false
 
@@ -274,12 +274,12 @@ struct ChatDetailView: View {
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                     }
-                    .opacity(max(0.1, 1.0 - Double(abs(dragOffset.width)) / 100.0))
+                    .opacity(max(0.1, 1.0 - Double(abs(micPhysics.currentOffset.width)) / 100.0))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .offset(x: min(0, dragOffset.width * 0.8))
+                .offset(x: min(0, micPhysics.currentOffset.width * 0.8))
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing).combined(with: .opacity),
                     removal: .move(edge: .leading).combined(with: .opacity)
@@ -391,8 +391,8 @@ struct ChatDetailView: View {
                         if isPressed {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
                                 recordingState = .holding
-                                dragOffset = .zero
                             }
+                            micPhysics.reset()
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             Task {
                                 await voiceManager.startRecording()
@@ -407,21 +407,27 @@ struct ChatDetailView: View {
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 guard recordingState == .holding else { return }
-                                // Instant update without withAnimation for 0-lag 120Hz tracking
-                                dragOffset = value.translation
+                                // Telegram physics target tracking (diagonal allowed)
+                                micPhysics.targetOffset = value.translation
                                 
-                                // 1. Horizontal swipe-to-cancel check
-                                if value.translation.width < -100 {
+                                // 1. Horizontal swipe-to-cancel check (Telegram constant: 150)
+                                if value.translation.width < -150 {
                                     cancelAndDiscardRecording()
+                                    micPhysics.reset()
                                 }
                                 
-                                // 2. Vertical swipe-to-lock check
-                                if value.translation.height < -65 {
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) { // Bouncy spring back
+                                // 2. Vertical swipe-to-lock check (Telegram constant: 110)
+                                if value.translation.height < -110 {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.58)) {
                                         recordingState = .locked
-                                        dragOffset = .zero
                                     }
+                                    micPhysics.reset()
                                     UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                }
+                            }
+                            .onEnded { _ in
+                                if recordingState == .holding {
+                                    micPhysics.reset()
                                 }
                             }
                     )
@@ -429,15 +435,15 @@ struct ChatDetailView: View {
                     .alignmentGuide(.bottom) { d in
                         recordingState == .holding ? d[.bottom] - 6 : d[.bottom]
                     }
-                    // Button physically follows finger in 2D space, but locked to primary axis!
+                    // Button physically follows finger in 2D space using Telegram's 0.3 interpolation factor!
                     .offset(
-                        x: recordingState == .holding && abs(dragOffset.width) > abs(dragOffset.height) ? min(0, dragOffset.width) : 0,
-                        y: recordingState == .holding && abs(dragOffset.height) > abs(dragOffset.width) ? min(0, dragOffset.height) : 0
+                        x: recordingState == .holding ? min(0, micPhysics.currentOffset.width) : 0,
+                        y: recordingState == .holding ? min(0, micPhysics.currentOffset.height) : 0
                     )
                     .overlay(alignment: .top) {
                         if recordingState == .holding {
-                            let distance = abs(dragOffset.height)
-                            let isClose = dragOffset.height < -40
+                            let distance = abs(micPhysics.currentOffset.height)
+                            let isClose = micPhysics.currentOffset.height < -60
                             
                             VStack(spacing: 6) {
                                 Image(systemName: "lock.fill")
@@ -672,4 +678,55 @@ struct RecordButtonStyle: ButtonStyle {
             .environment(AppState())
     }
     .preferredColorScheme(.dark)
+}
+
+// MARK: - Telegram Mic Physics
+
+class MicPhysicsEngine: ObservableObject {
+    @Published var currentOffset: CGSize = .zero
+    var targetOffset: CGSize = .zero {
+        didSet {
+            if displayLink == nil {
+                start()
+            }
+        }
+    }
+    
+    private var displayLink: CADisplayLink?
+    
+    func start() {
+        displayLink?.invalidate()
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+    
+    func stop() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+    
+    func reset() {
+        targetOffset = .zero
+        currentOffset = .zero
+        stop()
+    }
+    
+    @objc private func tick() {
+        // Telegram's 0.3 interpolation factor for smooth inertia
+        let newWidth = currentOffset.width * 0.7 + targetOffset.width * 0.3
+        let newHeight = currentOffset.height * 0.7 + targetOffset.height * 0.3
+        
+        let diffW = abs(newWidth - targetOffset.width)
+        let diffH = abs(newHeight - targetOffset.height)
+        
+        let finalWidth = diffW < 0.5 ? targetOffset.width : newWidth
+        let finalHeight = diffH < 0.5 ? targetOffset.height : newHeight
+        
+        if finalWidth != currentOffset.width || finalHeight != currentOffset.height {
+            currentOffset = CGSize(width: finalWidth, height: finalHeight)
+        } else if finalWidth == 0 && finalHeight == 0 {
+            stop()
+        }
+    }
 }
