@@ -70,7 +70,7 @@ struct ProfileView: View {
                             if uploading {
                                 ProgressView()
                                     .padding()
-                                    .glassBackgroundEffect(in: Circle())
+                                    .glassEffect(in: Circle())
                             }
                         }
                     

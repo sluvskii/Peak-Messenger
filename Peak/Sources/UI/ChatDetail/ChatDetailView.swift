@@ -99,7 +99,7 @@ struct ChatDetailView: View {
 
                         inputBar
                     }
-                    .glassBackgroundEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .padding(.horizontal, 14)
                     .padding(.bottom, 8)
                 }
@@ -219,7 +219,7 @@ struct ChatDetailView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(.red)
                     .frame(width: 40, height: 40)
-                    .glassBackgroundEffect(in: Circle())
+                    .glassEffect(in: Circle())
                     .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
                     .animation(.spring(duration: 0.2), value: hasStartedRecording)
                     .gesture(recordGesture)
@@ -238,7 +238,7 @@ struct ChatDetailView: View {
                     }
                     .frame(width: 40, height: 40)
                 }
-                .glassBackgroundEffect(in: Circle())
+                .glassEffect(in: Circle())
                 .disabled(uploading)
                 .buttonStyle(PressButtonStyle())
 
@@ -261,7 +261,7 @@ struct ChatDetailView: View {
                             .font(.system(size: 19))
                             .foregroundStyle(PeakColors.textPrimary)
                             .frame(width: 40, height: 40)
-                            .glassBackgroundEffect(in: Circle())
+                            .glassEffect(in: Circle())
                             .contentShape(Rectangle())
                             .gesture(recordGesture)
                     } else {

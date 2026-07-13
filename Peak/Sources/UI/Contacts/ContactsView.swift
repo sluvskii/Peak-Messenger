@@ -44,7 +44,7 @@ struct ContactsView: View {
                 if isLoading {
                     ProgressView()
                         .padding()
-                        .glassBackgroundEffect(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .task {
