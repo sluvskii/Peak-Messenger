@@ -41,64 +41,64 @@ struct ChatDetailView: View {
         ZStack {
             PeakColors.black.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Message list
-                messageList
+            messageList
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 0) {
+                        // Editing banner
+                        if let editing = editingMessage {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Редактирование")
+                                        .font(PeakTypography.caption)
+                                        .foregroundStyle(PeakColors.accent)
+                                    Text(editing.displayText)
+                                        .font(PeakTypography.body)
+                                        .foregroundStyle(PeakColors.textSecondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Button {
+                                    editingMessage = nil
+                                    messageText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(PeakColors.textTertiary)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
+                        }
 
-                // Editing banner
-                if let editing = editingMessage {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Редактирование")
-                                .font(PeakTypography.caption)
-                                .foregroundStyle(PeakColors.accent)
-                            Text(editing.displayText)
-                                .font(PeakTypography.body)
-                                .foregroundStyle(PeakColors.textSecondary)
-                                .lineLimit(1)
+                        // Replying banner
+                        if let replying = replyingMessage {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(appState.chat(for: chat.id)?.participants.first(where: { $0.id == replying.senderId })?.username ?? "Ответ")
+                                        .font(PeakTypography.caption)
+                                        .foregroundStyle(PeakColors.accent)
+                                    Text(replying.displayText)
+                                        .font(PeakTypography.body)
+                                        .foregroundStyle(PeakColors.textSecondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Button {
+                                    replyingMessage = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(PeakColors.textTertiary)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
                         }
-                        Spacer()
-                        Button {
-                            editingMessage = nil
-                            messageText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(PeakColors.textTertiary)
-                        }
+
+                        inputBar
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(PeakColors.surface)
+                    .background(Color.clear)
                 }
-
-                // Replying banner
-                if let replying = replyingMessage {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(appState.chat(for: chat.id)?.participants.first(where: { $0.id == replying.senderId })?.username ?? "Ответ")
-                                .font(PeakTypography.caption)
-                                .foregroundStyle(PeakColors.accent)
-                            Text(replying.displayText)
-                                .font(PeakTypography.body)
-                                .foregroundStyle(PeakColors.textSecondary)
-                                .lineLimit(1)
-                        }
-                        Spacer()
-                        Button {
-                            replyingMessage = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(PeakColors.textTertiary)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(PeakColors.surface)
-                }
-
-                // Input bar
-                inputBar
-            }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -206,53 +206,66 @@ struct ChatDetailView: View {
         let uploading = isUploadingMedia
         let recording = voiceManager.isRecording
         
-        return VStack(spacing: 0) {
-            PeakDivider()
-
-            HStack(alignment: .bottom, spacing: 10) {
-                if recording {
-                    recordingHUD
-                    
-                    // Mic button (held down during recording)
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.red)
-                        .frame(width: 36, height: 36)
-                        .scaleEffect(hasStartedRecording ? 1.2 : 1.0)
-                        .animation(.spring(duration: 0.2), value: hasStartedRecording)
-                        .gesture(recordGesture)
-                } else {
-                    // Attachment
-                    PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+        return HStack(alignment: .bottom, spacing: 8) {
+            if recording {
+                recordingHUD
+                
+                // Mic button (held down during recording)
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.red)
+                    .frame(width: 40, height: 40)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                    .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
+                    .animation(.spring(duration: 0.2), value: hasStartedRecording)
+                    .gesture(recordGesture)
+            } else {
+                // Attachment Button
+                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                    ZStack {
                         if uploading {
                             ProgressView()
-                                .frame(width: 36, height: 36)
+                                .tint(.white)
                         } else {
                             Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .regular))
-                                .foregroundStyle(PeakColors.textSecondary)
-                                .frame(width: 36, height: 36)
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(PeakColors.textPrimary)
                         }
                     }
-                    .disabled(uploading)
+                    .frame(width: 40, height: 40)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                }
+                .disabled(uploading)
+                .buttonStyle(PressButtonStyle())
 
-                    // Text field
+                // Text field
+                HStack(alignment: .bottom, spacing: 10) {
                     TextField("Сообщение", text: $messageText, axis: .vertical)
                         .font(PeakTypography.body)
                         .foregroundStyle(PeakColors.textPrimary)
                         .lineLimit(1...6)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(PeakColors.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .focused($isInputFocused)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
 
-                    // Send / voice button
+                // Send / voice button
+                Group {
                     if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Image(systemName: "mic")
-                            .font(.system(size: 22, weight: .regular))
-                            .foregroundStyle(PeakColors.textSecondary)
-                            .frame(width: 36, height: 36)
+                            .font(.system(size: 19))
+                            .foregroundStyle(PeakColors.textPrimary)
+                            .frame(width: 40, height: 40)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                             .contentShape(Rectangle())
                             .gesture(recordGesture)
                     } else {
@@ -262,20 +275,27 @@ struct ChatDetailView: View {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(PeakColors.black)
-                                .frame(width: 34, height: 34)
+                                .frame(width: 40, height: 40)
                                 .background(PeakColors.textPrimary)
                                 .clipShape(Circle())
+                                .shadow(color: .white.opacity(0.2), radius: 4, y: 2)
                         }
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(PeakColors.black)
-            .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
-            .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+        .background(Color.clear)
+        .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
+        .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
     }
 
     private var recordingHUD: some View {
@@ -296,7 +316,7 @@ struct ChatDetailView: View {
                 ForEach(0..<voiceManager.audioLevels.count, id: \.self) { index in
                     let level = CGFloat(voiceManager.audioLevels[index])
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(PeakColors.textSecondary)
+                        .fill(PeakColors.textPrimary)
                         .frame(width: 2, height: max(3, 20 * level))
                 }
             }
@@ -309,10 +329,8 @@ struct ChatDetailView: View {
                 .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
                 .offset(x: dragOffset)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(PeakColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
     }
 
     private var recordGesture: some Gesture {
