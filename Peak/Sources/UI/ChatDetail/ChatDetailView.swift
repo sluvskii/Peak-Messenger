@@ -67,7 +67,8 @@ struct ChatDetailView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(.ultraThinMaterial)
+                            
+                            Divider()
                         }
 
                         // Replying banner
@@ -92,12 +93,15 @@ struct ChatDetailView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(.ultraThinMaterial)
+                            
+                            Divider()
                         }
 
                         inputBar
                     }
-                    .background(Color.clear)
+                    .glassBackgroundEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 8)
                 }
         }
         .navigationTitle("")
@@ -215,9 +219,7 @@ struct ChatDetailView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(.red)
                     .frame(width: 40, height: 40)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                    .glassBackgroundEffect(in: Circle())
                     .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
                     .animation(.spring(duration: 0.2), value: hasStartedRecording)
                     .gesture(recordGesture)
@@ -235,10 +237,8 @@ struct ChatDetailView: View {
                         }
                     }
                     .frame(width: 40, height: 40)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                 }
+                .glassBackgroundEffect(in: Circle())
                 .disabled(uploading)
                 .buttonStyle(PressButtonStyle())
 
@@ -252,9 +252,7 @@ struct ChatDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                 // Send / voice button
                 Group {
@@ -263,9 +261,7 @@ struct ChatDetailView: View {
                             .font(.system(size: 19))
                             .foregroundStyle(PeakColors.textPrimary)
                             .frame(width: 40, height: 40)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                            .glassBackgroundEffect(in: Circle())
                             .contentShape(Rectangle())
                             .gesture(recordGesture)
                     } else {
@@ -276,9 +272,7 @@ struct ChatDetailView: View {
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(PeakColors.black)
                                 .frame(width: 40, height: 40)
-                                .background(PeakColors.textPrimary)
-                                .clipShape(Circle())
-                                .shadow(color: .white.opacity(0.2), radius: 4, y: 2)
+                                .background(PeakColors.textPrimary, in: Circle())
                         }
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
@@ -287,13 +281,6 @@ struct ChatDetailView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-        .padding(.horizontal, 14)
-        .padding(.bottom, 8)
-        .background(Color.clear)
         .animation(.spring(duration: 0.25, bounce: 0.3), value: recording)
         .animation(.spring(duration: 0.25, bounce: 0.3), value: messageText.isEmpty)
     }

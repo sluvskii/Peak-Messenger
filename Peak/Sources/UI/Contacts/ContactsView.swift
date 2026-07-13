@@ -44,8 +44,7 @@ struct ContactsView: View {
                 if isLoading {
                     ProgressView()
                         .padding()
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .glassBackgroundEffect(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .task {
