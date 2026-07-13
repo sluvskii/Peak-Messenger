@@ -213,14 +213,14 @@ struct ChatDetailView: View {
         return HStack(alignment: .bottom, spacing: 10) {
             if recording {
                 recordingHUD
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 
                 // Mic button (held down during recording)
                 Image(systemName: "mic.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(.red)
                     .frame(width: 44, height: 44)
-                    .glassEffect(in: Circle())
+                    .glassEffect(.regular.interactive(), in: Circle())
                     .scaleEffect(hasStartedRecording ? 1.25 : 1.0)
                     .animation(.spring(duration: 0.2), value: hasStartedRecording)
                     .gesture(recordGesture)
@@ -239,7 +239,7 @@ struct ChatDetailView: View {
                     }
                     .frame(width: 44, height: 44)
                 }
-                .glassEffect(in: Circle())
+                .glassEffect(.regular.interactive(), in: Circle())
                 .disabled(uploading)
                 .buttonStyle(PressButtonStyle())
 
@@ -253,7 +253,7 @@ struct ChatDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                 // Send / voice button
                 Group {
@@ -262,7 +262,7 @@ struct ChatDetailView: View {
                             .font(.system(size: 19))
                             .foregroundStyle(PeakColors.textPrimary)
                             .frame(width: 44, height: 44)
-                            .glassEffect(in: Circle())
+                            .glassEffect(.regular.interactive(), in: Circle())
                             .contentShape(Rectangle())
                             .gesture(recordGesture)
                     } else {
