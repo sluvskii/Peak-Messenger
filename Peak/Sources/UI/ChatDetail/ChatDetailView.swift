@@ -289,34 +289,45 @@ struct ChatDetailView: View {
 
     private var recordingHUD: some View {
         HStack(spacing: 12) {
-            // Pulsing dot
-            Image(systemName: "circle.fill")
-                .font(.system(size: 8))
-                .foregroundStyle(.red)
-                .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.2)
+            // Pulsing dot + Duration
+            HStack(spacing: 6) {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.red)
+                    .opacity(voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? 1.0 : 0.3)
+                
+                Text(formatDuration(voiceManager.recordingDuration))
+                    .font(PeakTypography.bodyMedium)
+                    .foregroundStyle(PeakColors.textPrimary)
+                    .monospacedDigit()
+            }
             
-            Text(formatDuration(voiceManager.recordingDuration))
-                .font(PeakTypography.bodyMedium)
-                .foregroundStyle(PeakColors.textPrimary)
-                .monospacedDigit()
-            
-            // Audio levels visualization
-            HStack(spacing: 2) {
+            // Audio levels visualization (fixed width to prevent layout shifting)
+            HStack(spacing: 2.5) {
                 ForEach(0..<voiceManager.audioLevels.count, id: \.self) { index in
                     let level = CGFloat(voiceManager.audioLevels[index])
-                    RoundedRectangle(cornerRadius: 1)
+                    RoundedRectangle(cornerRadius: 1.5)
                         .fill(PeakColors.textPrimary)
-                        .frame(width: 2, height: max(3, 20 * level))
+                        .frame(width: 3, height: max(4, 24 * level))
                 }
             }
-            .frame(height: 30)
+            .frame(width: 70, height: 30)
             
             Spacer()
             
-            Text(dragOffset < -60 ? "Отпустите" : "< Смахните")
-                .font(PeakTypography.caption)
-                .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
-                .offset(x: dragOffset)
+            // Cancel swipe gesture indicator (no wrapping, animated chevron)
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(PeakColors.textSecondary)
+                    .offset(x: voiceManager.recordingDuration.truncatingRemainder(dividingBy: 1) > 0.5 ? -3 : 0)
+                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: voiceManager.recordingDuration)
+                
+                Text("Отмена")
+                    .font(PeakTypography.caption)
+                    .foregroundStyle(dragOffset < -60 ? .red : PeakColors.textSecondary)
+            }
+            .offset(x: dragOffset)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
